@@ -7,9 +7,13 @@ name: Demo portal
 on:
   push:
     branches: [main]
+    # What the site is built from; the tests and the screenshot baselines don't change it.
     paths:
       - 'packages/portal/**'
+      - '!packages/portal/test/**'
+      - '!packages/portal/screenshots/**'
       - 'packages/simpright/**'
+      - '!packages/simpright/test/**'
       - 'examples/sample-project/**'
       - 'scripts/sample-site.ts'
       - '.github/workflows/demo.yml'
