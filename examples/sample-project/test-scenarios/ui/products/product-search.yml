@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../../../node_modules/@simpright/scenarios/schemas/scenarios.schema.json
+suite: Product search
+tags: ["@products"]
+scenarios:
+  - id: UI-001
+    name: Search by name shows only matching products
+    tags: ["@smoke"]
+    status: automated
+    automatedIn: tests/ui/products/product-search.spec.ts
+    role: guest
+    preconditions:
+      - The home page is open.
+    steps:
+      - Search for "pliers".
+      - Verify every product shown has "pliers" in its name.
+  - id: UI-002
+    name: A search with no match says so
+    status: automated
+    automatedIn: tests/ui/products/product-search.spec.ts
+    role: guest
+    preconditions:
+      - The home page is open.
+    steps:
+      - Search for "zzz".
+      - Verify the page says no products were found.
+  - id: UI-003
+    name: Clearing the search shows every product again
+    status: manual
+    role: guest
+    preconditions:
+      - The home page is open.
+    steps:
+      - Search for "pliers".
+      - Clear the search.
+      - Verify the grid shows the first page of every product.

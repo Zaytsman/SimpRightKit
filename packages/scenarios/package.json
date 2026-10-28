@@ -1,0 +1,48 @@
+{
+  "name": "@simpright/scenarios",
+  "version": "0.1.0",
+  "description": "Test scenarios and bugs as YAML files: their schemas, a validator that keeps them in sync with the Playwright specs, and a step-title check.",
+  "keywords": [
+    "simpright",
+    "playwright",
+    "test-scenarios",
+    "test-cases",
+    "qa"
+  ],
+  "license": "MIT",
+  "author": "Andrii Zaitsev",
+  "homepage": "https://github.com/Zaytsman/SimpRightKit/tree/main/packages/scenarios#readme",
+  "bugs": "https://github.com/Zaytsman/SimpRightKit/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zaytsman/SimpRightKit.git",
+    "directory": "packages/scenarios"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "simpright-scenarios": "dist/cli.js"
+  },
+  "exports": {
+    "./schemas/scenarios.schema.json": "./schemas/scenarios.schema.json",
+    "./schemas/bug.schema.json": "./schemas/bug.schema.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "simpright": "0.1.0",
+    "yaml": "^2.9.1"
+  }
+}

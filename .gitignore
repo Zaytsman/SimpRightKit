@@ -1,0 +1,13 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+*.tgz
+
+# Claude Code's local, private files
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Screenshot baselines are Linux's (CI); other systems write their own.
+packages/portal/screenshots/baselines/*-win32.png
+packages/portal/screenshots/baselines/*-darwin.png

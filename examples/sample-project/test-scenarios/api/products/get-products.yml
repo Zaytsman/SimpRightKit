@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../../../node_modules/@simpright/scenarios/schemas/scenarios.schema.json
+suite: Products API
+tags: ["@products-api"]
+scenarios:
+  - id: API-0001
+    name: The product list returns products with a name and a price
+    tags: ["@smoke"]
+    status: automated
+    automatedIn: tests/api/products/get-products.spec.ts
+    steps:
+      - Send GET /products.
+      - Verify the response status is 200.
+      - Verify every product has a name and a price.
+  - id: API-0002
+    name: Page 2 of the product list returns the next products
+    status: automated
+    automatedIn: tests/api/products/get-products.spec.ts
+    steps:
+      - Send GET /products with page=2.
+      - Verify the response status is 200.
+      - Verify the response is page 2.
+  - id: API-0003
+    name: A page past the last one returns an empty list
+    status: automated
+    automatedIn: tests/api/products/get-products.spec.ts
+    knownIssue: The API returns 500 for a page past the last one instead of an empty list.
+    bug: BUG-001
+    steps:
+      - Send GET /products with page=999.
+      - Verify the response status is 200.
+      - Verify the list is empty.

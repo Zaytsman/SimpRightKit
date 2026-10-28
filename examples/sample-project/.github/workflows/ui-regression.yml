@@ -1,0 +1,16 @@
+name: UI regression
+
+on:
+  schedule:
+    - cron: '15 6 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/playwright-run.yml
+    with:
+      project: ui
+      family: ui-regression
+    secrets:
+      SHOP_USER: ${{ secrets.SHOP_USER }}
+      SHOP_PASSWORD: ${{ secrets.SHOP_PASSWORD }}

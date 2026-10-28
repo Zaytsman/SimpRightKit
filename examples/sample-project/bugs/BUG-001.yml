@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../node_modules/@simpright/scenarios/schemas/bug.schema.json
+id: BUG-001
+title: GET /products returns 500 for a page past the last one instead of an empty list
+status: open
+severity: minor
+layer: api
+area: products
+affects:
+  - GET /products
+found: 2026-10-01
+steps:
+  - Send GET /products with page=999.
+expected: 200 with an empty list.
+actual: 500 with no body.

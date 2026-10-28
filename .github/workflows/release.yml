@@ -1,0 +1,127 @@
+name: Release
+
+# Publishes the kit's packages to npm when a version tag (vX.Y.Z) is pushed. The checks run first; the publish job
+# then waits for an approval in the `npm` environment and publishes each package through npm trusted publishing: no
+# npm token anywhere, GitHub's OIDC identity instead, and provenance that ties each version to this workflow run.
+# A GitHub release with the CHANGELOG's entry follows. npmjs.com links each package to this file and environment.
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # The tag names the version every package has, and the packages pin each other at it.
+      - name: Check the version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          node -e '
+            const version = process.env.TAG.replace(/^v/, "");
+            const dirs = ["simpright", "scenarios", "portal"].map((dir) => "packages/" + dir);
+            const manifests = dirs.map((dir) => require("./" + dir + "/package.json"));
+            const names = new Set(manifests.map((manifest) => manifest.name));
+            const wrong = manifests.flatMap((manifest) => [
+              ...(manifest.version === version ? [] : [manifest.name + " is " + manifest.version]),
+              ...Object.entries(manifest.dependencies || {})
+                .filter(([name, range]) => names.has(name) && range !== version)
+                .map(([name, range]) => manifest.name + " pins " + name + " at " + range),
+            ]);
+            if (wrong.length) { console.error("The tag is v" + version + ", but " + wrong.join("; ")); process.exit(1); }
+            console.log("Every package is at " + version);
+          '
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Check the packages' files
+        run: npm run check:packages
+
+  publish:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Waits for an approval; npmjs.com accepts a publish from this repository, this workflow and this environment only.
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or later.
+      - name: Check npm
+        run: |
+          npm --version
+          node -e 'const [major, minor, patch] = process.argv[1].split(".").map(Number); process.exit(major > 11 || (major === 11 && (minor > 5 || (minor === 5 && patch >= 1))) ? 0 : 1)' "$(npm --version)"
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build
+        run: npm run build
+
+      # In dependency order, so a package's sibling is on npm before it.
+      - name: Publish
+        run: |
+          for dir in packages/simpright packages/scenarios packages/portal; do
+            (cd "$dir" && npm publish)
+          done
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # The CHANGELOG's entry for this version: from its heading to the next one.
+          awk -v heading="## ${TAG#v} " 'index($0, heading) == 1 { found = 1; next } found && /^## / { exit } found' CHANGELOG.md > notes.md
+          test -s notes.md
+          gh release create "$TAG" --title "SimpRight Kit $TAG" --notes-file notes.md --verify-tag

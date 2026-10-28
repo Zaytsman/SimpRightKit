@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=../../../node_modules/@simpright/scenarios/schemas/scenarios.schema.json
+suite: Products API
+tags: ["@products-api"]
+scenarios:
+  - id: API-0004
+    name: A product's details include its price
+    status: automated
+    automatedIn: tests/api/products/get-products-by-product-id.spec.ts
+    steps:
+      - Send GET /products/{productId} for the first listed product.
+      - Verify the response status is 200.
+      - Verify the price is a positive number.
+  - id: API-0005
+    name: An unknown product id returns 404
+    status: manual
+    steps:
+      - Send GET /products/{productId} with an id that doesn't exist.
+      - Verify the response status is 404.

@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../node_modules/@simpright/scenarios/schemas/bug.schema.json
+id: BUG-002
+title: The cart badge counts lines instead of items
+status: open
+severity: major
+layer: ui
+area: cart
+affects:
+  - the cart badge in the nav bar
+found: 2026-10-02
+steps:
+  - Open a product page, set the quantity to 3 and add it to the cart.
+expected: The badge shows 3.
+actual: The badge shows 1.

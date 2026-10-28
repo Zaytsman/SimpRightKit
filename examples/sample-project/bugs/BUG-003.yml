@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../node_modules/@simpright/scenarios/schemas/bug.schema.json
+id: BUG-003
+title: The search box ignored a trailing space
+status: fixed
+severity: trivial
+layer: ui
+area: products
+affects:
+  - the search box
+found: 2026-09-20
+resolved: 2026-10-05
+steps:
+  - Search for "pliers " with a trailing space.
+expected: The same results as "pliers".
+actual: No results.

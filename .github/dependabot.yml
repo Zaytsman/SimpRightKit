@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  # The root covers every workspace package.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # A new version is proposed only after 7 days, so a hijacked release has time to be caught and pulled.
+    # Security updates are not delayed.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    ignore:
+      # The dashboard loads Chart.js from jsDelivr at a pinned version with its integrity hash; the screenshot tests
+      # use this copy of the same version. Upgrade the page's URL and hash, and this, together, by hand.
+      - dependency-name: "chart.js"
+    groups:
+      # One PR for all minor/patch bumps; major versions get their own PR.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    # The actions are pinned to commit SHAs with the version in a comment; Dependabot updates both.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci"

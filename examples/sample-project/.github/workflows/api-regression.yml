@@ -1,0 +1,17 @@
+name: API regression
+
+on:
+  schedule:
+    - cron: '15 2 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/playwright-run.yml
+    with:
+      project: api
+      family: api-regression
+      publish-latest-coverage: true
+    secrets:
+      SHOP_USER: ${{ secrets.SHOP_USER }}
+      SHOP_PASSWORD: ${{ secrets.SHOP_PASSWORD }}

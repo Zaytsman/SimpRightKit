@@ -1,0 +1,26 @@
+name: Publish the run's report
+description: Publishes the run's report to the portal.
+
+inputs:
+  run-id:
+    description: The run's id in simpright.yml runs
+    required: true
+  keep:
+    description: How many runs of it stay on the portal
+    required: false
+    default: ''
+  latest-coverage:
+    description: "'true': also publish this run's API coverage as the latest"
+    required: false
+    default: 'false'
+  token:
+    description: A token that can push to gh-pages
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        RUN_ID: ${{ inputs.run-id }}
+      run: echo "publish $RUN_ID"

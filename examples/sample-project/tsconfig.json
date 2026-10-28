@@ -1,0 +1,10 @@
+{
+  // The sample's path aliases: simpright doctor follows them when it checks the core's imports.
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@core/*": ["./src/core/*"],
+      "@app": ["./src/app/index.ts"], /* the app's entry point */
+    },
+  },
+}

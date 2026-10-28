@@ -1,0 +1,381 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "simpright.schema.json",
+  "title": "SimpRight project config",
+  "description": "The project's toolchain config, read by the QA agents and the scripts (never by tests): paths, commands, ID rules, roles, API and UI exemplar files and rules, live app guardrails, the parts in use, CI facts, the test runs and the portal's text.",
+  "type": "object",
+  "required": ["project", "paths", "commands", "ids", "roles", "liveApi"],
+  "additionalProperties": false,
+  "definitions": {
+    "path": { "type": "string", "minLength": 1, "pattern": "^[^/\\\\]", "description": "Relative to the repo root." },
+    "code": { "type": "string", "pattern": "^[A-Z]+$" }
+  },
+  "properties": {
+    "template": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "The version of SimpRightTemplate (a tag of Zaytsman/SimpRightTemplate) the core files match; simpright doctor compares them."
+    },
+    "project": {
+      "type": "object",
+      "required": ["language", "runner", "conventions"],
+      "additionalProperties": false,
+      "properties": {
+        "language": { "type": "string", "enum": ["typescript", "javascript"] },
+        "runner": { "type": "string", "enum": ["playwright"] },
+        "conventions": {
+          "type": "array",
+          "description": "Files with the prose conventions, the project's own and the framework's; agents read them before writing code.",
+          "items": { "$ref": "#/definitions/path" },
+          "minItems": 1
+        }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "required": ["scenarios", "scenarioSchema", "tests"],
+      "additionalProperties": false,
+      "properties": {
+        "scenarios": { "$ref": "#/definitions/path", "description": "Scenario folder: <layer>/<area>/<name>.yml." },
+        "scenarioSchema": { "$ref": "#/definitions/path" },
+        "bugs": { "$ref": "#/definitions/path", "description": "Bug folder: one <ID>.yml per bug in the app under test; a scenario with a knownIssue names its bug." },
+        "bugSchema": { "$ref": "#/definitions/path" },
+        "contracts": { "$ref": "#/definitions/path", "description": "API contracts, one markdown file per area." },
+        "contractFormat": { "$ref": "#/definitions/path", "description": "The contract format specification the contract writer follows." },
+        "tests": { "$ref": "#/definitions/path", "description": "Spec folder: <layer>/<area>/<name>.spec.ts." },
+        "apiTests": { "$ref": "#/definitions/path" },
+        "uiTests": { "$ref": "#/definitions/path" },
+        "pages": { "$ref": "#/definitions/path", "description": "Page objects, with components/ and dialogs/ inside." },
+        "flows": { "$ref": "#/definitions/path", "description": "Multi-page user journeys." },
+        "userStories": { "$ref": "#/definitions/path", "description": "User stories, bug reports and acceptance criteria: input for the requirements analyst and the UI scenario writer." },
+        "analysis": { "$ref": "#/definitions/path", "description": "Analysis documents with test plans, one per work item, written by the requirements analyst." },
+        "testData": { "$ref": "#/definitions/path", "description": "Test data: shared constants and factories." },
+        "coverageSummary": { "$ref": "#/definitions/path", "description": "API coverage summary; generated, so it may not exist." }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "description": "Shell commands. {spec}, {id}, {path} and {run} are placeholders.",
+      "required": ["typecheck", "validateScenarios", "runSpec", "runScenario"],
+      "additionalProperties": false,
+      "properties": {
+        "typecheck": { "type": "string", "minLength": 1 },
+        "validateScenarios": { "type": "string", "minLength": 1 },
+        "runSpec": { "type": "string", "pattern": "\\{spec\\}" },
+        "runScenario": { "type": "string", "pattern": "\\{id\\}" },
+        "ciRunInfo": {
+          "type": "string",
+          "pattern": "\\{run\\}",
+          "description": "Shows a CI run ({run}): workflow, branch, commit, time and conclusion."
+        },
+        "ciFailedLog": {
+          "type": "string",
+          "pattern": "\\{run\\}",
+          "description": "Prints the logs of the failed steps of a CI run ({run})."
+        },
+        "repeatSpec": {
+          "type": "string",
+          "pattern": "\\{spec\\}",
+          "description": "Runs a spec several times in a row, to catch flaky tests."
+        },
+        "validateContracts": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Checks the contract folder against the contract format; may need an optional package."
+        },
+        "diffContracts": {
+          "type": "string",
+          "pattern": "\\{spec\\}",
+          "description": "Lists the endpoints added, removed and changed between the contracts and an OpenAPI spec ({spec})."
+        },
+        "contractsFromOpenApi": {
+          "type": "string",
+          "pattern": "\\{spec\\}",
+          "description": "Converts an OpenAPI spec ({spec}) into draft contracts."
+        },
+        "inspectUi": {
+          "type": "string",
+          "pattern": "\\{path\\}",
+          "description": "Read-only page inspector: prints the data-test elements and accessibility tree of a page ({path}, relative to baseUrl)."
+        }
+      }
+    },
+    "ids": {
+      "type": "object",
+      "description": "Scenario IDs are <PREFIX>-<number>, numbered across the whole layer (not per area) with a fixed number of digits; a scenario file lives in <layer>/<area>/<name>.yml.",
+      "required": ["layers", "areas"],
+      "additionalProperties": false,
+      "properties": {
+        "layers": {
+          "type": "object",
+          "description": "Layer folder name -> its ID prefix and number of digits, e.g. api: { prefix: API, digits: 4 } for API-0001.",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "required": ["prefix", "digits"],
+            "additionalProperties": false,
+            "properties": {
+              "prefix": { "$ref": "#/definitions/code" },
+              "digits": { "type": "integer", "minimum": 2, "maximum": 6 }
+            }
+          }
+        },
+        "areas": {
+          "type": "array",
+          "description": "Area folder names under each layer, e.g. products.",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+        },
+        "bugs": {
+          "type": "object",
+          "description": "Bug IDs: <PREFIX>-<number> with a fixed number of digits, e.g. BUG-001; the file is <paths.bugs>/<ID>.yml.",
+          "required": ["prefix", "digits"],
+          "additionalProperties": false,
+          "properties": {
+            "prefix": { "$ref": "#/definitions/code" },
+            "digits": { "type": "integer", "minimum": 2, "maximum": 6 }
+          }
+        },
+        "fileNames": {
+          "type": "object",
+          "description": "Layer -> regex for scenario file names (without .yml); {area} stands for the area folder name. Layers not listed accept any kebab-case name.",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "roles": {
+      "type": "array",
+      "description": "Login roles; a scenario's role must be one of these.",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "api": {
+      "type": "object",
+      "description": "Optional: only projects with API tests have it.",
+      "required": ["exemplars", "knownIssue", "rules"],
+      "additionalProperties": false,
+      "properties": {
+        "exemplars": {
+          "type": "object",
+          "description": "Existing files whose style new code copies.",
+          "required": ["client", "service", "dto", "fixtures", "spec"],
+          "additionalProperties": false,
+          "properties": {
+            "client": { "$ref": "#/definitions/path" },
+            "service": { "$ref": "#/definitions/path" },
+            "dto": { "$ref": "#/definitions/path" },
+            "fixtures": { "$ref": "#/definitions/path" },
+            "spec": { "$ref": "#/definitions/path" },
+            "helpers": { "$ref": "#/definitions/path", "description": "Assertion and attachment helpers." },
+            "checks": { "$ref": "#/definitions/path", "description": "Shared checks for steps (status, body, errors), reused by every spec." },
+            "steps": { "$ref": "#/definitions/path", "description": "Shared step helpers: send and attach, auth labels, templates for tests that differ only in data." },
+            "cleanup": { "$ref": "#/definitions/path", "description": "Where the cleanup fixture is defined." },
+            "constants": { "$ref": "#/definitions/path", "description": "Shared seeded test values." },
+            "testDataUtils": { "$ref": "#/definitions/path", "description": "Helpers factories use, such as unique names." }
+          }
+        },
+        "knownIssue": {
+          "type": "string",
+          "pattern": "\\{bug\\}.*\\{text\\}",
+          "description": "Code that marks a test as hitting a known issue; {bug} is the scenario's bug ID and {text} its knownIssue."
+        },
+        "rules": {
+          "type": "array",
+          "description": "Agent-critical rules only; everything else is in project.conventions.",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "description": "Optional: only projects with UI tests have it.",
+      "required": ["exemplars", "knownIssue", "rules"],
+      "additionalProperties": false,
+      "properties": {
+        "exemplars": {
+          "type": "object",
+          "description": "Existing files whose style new code copies.",
+          "required": ["page", "component", "fixtures", "spec"],
+          "additionalProperties": false,
+          "properties": {
+            "page": { "$ref": "#/definitions/path" },
+            "basePage": { "$ref": "#/definitions/path", "description": "The base class pages extend." },
+            "component": { "$ref": "#/definitions/path", "description": "A reusable part of a page." },
+            "baseComponent": { "$ref": "#/definitions/path", "description": "The base class components extend." },
+            "dialog": { "$ref": "#/definitions/path", "description": "A dialog, or the base class dialogs extend." },
+            "flow": { "$ref": "#/definitions/path", "description": "A multi-page user journey." },
+            "fixtures": { "$ref": "#/definitions/path", "description": "Where page, component, dialog and flow fixtures are registered." },
+            "preconditionFixture": { "$ref": "#/definitions/path", "description": "A fixture that starts a test on a prepared page." },
+            "fixturesIndex": { "$ref": "#/definitions/path", "description": "Where precondition fixtures are exported." },
+            "spec": { "$ref": "#/definitions/path" },
+            "constants": { "$ref": "#/definitions/path", "description": "Shared seeded test values." }
+          }
+        },
+        "knownIssue": {
+          "type": "string",
+          "pattern": "\\{bug\\}.*\\{text\\}",
+          "description": "Code that marks a test as hitting a known issue; {bug} is the scenario's bug ID and {text} its knownIssue."
+        },
+        "rules": {
+          "type": "array",
+          "description": "Agent-critical rules only; everything else is in project.conventions.",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "liveApi": {
+      "type": "object",
+      "description": "Guardrails for anything that calls the live app, API or UI.",
+      "required": ["writes"],
+      "additionalProperties": false,
+      "properties": {
+        "writes": {
+          "type": "string",
+          "enum": ["never", "ask", "allowed"],
+          "description": "Whether agents may run tests or checks that change data on the live app (API or UI)."
+        },
+        "dangerous": {
+          "type": "array",
+          "description": "Calls that cause lasting harm, with how to avoid it.",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "transient": {
+          "type": "array",
+          "description": "Known ways the live app misbehaves for a while (re-seeds, caches, slow periods, data other visitors change), so failures can be told apart from bugs.",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "parts": {
+      "type": "object",
+      "description": "The framework's optional parts and whether this project uses them.",
+      "additionalProperties": false,
+      "properties": {
+        "scenarios": { "type": "boolean", "description": "Scenario and bug files, checked by simpright-scenarios validate (@simpright/scenarios)." },
+        "inspector": { "type": "boolean", "description": "The read-only page inspector (commands.inspectUi)." },
+        "agents": { "type": "boolean", "description": "The QA agents and their skills." },
+        "coverage": {
+          "description": "The optional API coverage reporter, or false.",
+          "oneOf": [
+            { "const": false },
+            {
+              "type": "object",
+              "required": ["package"],
+              "additionalProperties": false,
+              "properties": {
+                "package": { "type": "string", "minLength": 1, "description": "The npm package the coverage loader looks for." },
+                "registry": { "type": "string", "pattern": "^https://", "description": "Its registry, when it isn't the public npm registry." }
+              }
+            }
+          ]
+        },
+        "portal": {
+          "description": "The Automation Portal on GitHub Pages and the pages it has, or false.",
+          "oneOf": [
+            { "const": false },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "testCases": { "type": "boolean", "description": "The Test Cases pages, built from the scenarios." },
+                "bugs": { "type": "boolean", "description": "The Bugs page, built from the bug files." }
+              }
+            }
+          ]
+        },
+        "wiki": { "type": "boolean", "description": "docs/wiki published to the repository's GitHub wiki." }
+      }
+    },
+    "core": {
+      "type": "object",
+      "description": "The framework's core: the files a project gets from the template and keeps generic. A core code file imports only other core files, the seams and packages; simpright doctor checks it.",
+      "required": ["files"],
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "type": "array",
+          "description": "The core files, as repository paths: code, and documents such as the framework's conventions.",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "seams": {
+          "type": "array",
+          "description": "The project's own files that the core imports (its roles and its project file), as repository paths: they may import the app's code.",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "description": "Facts about the GitHub Actions workflows; simpright doctor checks them against .github/workflows/ and the local actions in .github/actions/.",
+      "required": ["node", "secrets"],
+      "additionalProperties": false,
+      "properties": {
+        "branches": {
+          "type": "object",
+          "required": ["default"],
+          "additionalProperties": false,
+          "properties": {
+            "default": { "type": "string", "minLength": 1, "description": "The protected branch: scheduled runs, publishing." },
+            "work": { "type": "string", "minLength": 1, "description": "The branch work happens on, when it isn't the default one." }
+          }
+        },
+        "node": { "type": "integer", "minimum": 18, "description": "The Node.js major version every actions/setup-node step uses, in a workflow or in a local action (through an input, as each workflow that uses the action passes it)." },
+        "secrets": {
+          "type": "array",
+          "description": "Names of the repository secrets the tests read, never their values. The reusable test workflow declares exactly these, and its callers pass them by name.",
+          "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "runs": {
+      "type": "array",
+      "description": "The test runs: one report family on GitHub Pages each, run by one caller of .github/workflows/playwright-run.yml. simpright doctor checks every caller against its entry.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "project"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "The report family: its folder on GitHub Pages and its workflow's family input." },
+          "label": { "type": "string", "minLength": 1, "description": "The name the portal shows." },
+          "note": { "type": "string", "minLength": 1, "description": "The line under the label in the portal's side panel." },
+          "project": { "enum": ["ui", "api", "all"], "description": "The Playwright project, or all for both in one run." },
+          "schedule": { "type": "string", "pattern": "^\\S+( \\S+){4}$", "description": "A cron in UTC. Without one, the run is started by hand only; every run can be." },
+          "grep": { "type": "string", "minLength": 1, "description": "Runs only the tests whose title or tags match, such as @smoke." },
+          "paths": { "type": "string", "minLength": 1, "description": "Space-separated spec folders or files the run is limited to, such as tests/ui/products/." },
+          "areaPicker": { "type": "boolean", "description": "A manual run with an area input: all, or one folder of the project's tests (instead of paths)." },
+          "keep": { "type": "integer", "minimum": 1, "default": 10, "description": "How many runs of the family stay on GitHub Pages." },
+          "trend": { "enum": ["ui", "api"], "description": "The layer whose health card, trends, known issues and Bugs page status this run feeds; one run per layer." },
+          "publishCoverage": { "type": "boolean", "description": "Publishes the run's API coverage as the latest coverage report." }
+        }
+      }
+    },
+    "portal": {
+      "type": "object",
+      "description": "The Automation Portal's text and health thresholds: the dashboard reads them from portal.json (written on every publish), the Test Cases and Bugs pages from their data files.",
+      "required": ["title"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "description": "The brand name on the portal pages and in their titles." },
+        "titleAccent": { "type": "string", "minLength": 1, "description": "The end of the title shown in the accent color, such as Right in SimpRight." },
+        "tagline":{ "type": "string", "minLength": 1, "description": "The line under the brand name." },
+        "description": { "type": "string", "minLength": 1, "description": "The sentence at the bottom of the side panel." },
+        "healthThreshold": {
+          "type": "object",
+          "description": "Layer -> failure rate in percent below which its latest regression counts as healthy; one per run with a trend.",
+          "additionalProperties": false,
+          "properties": {
+            "ui": { "type": "number", "minimum": 0, "maximum": 100 },
+            "api": { "type": "number", "minimum": 0, "maximum": 100 }
+          }
+        }
+      }
+    }
+  }
+}

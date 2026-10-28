@@ -1,0 +1,112 @@
+# yaml-language-server: $schema=./node_modules/simpright/simpright.schema.json
+#
+# The kit's sample project: a made-up shop with UI and API tests. The kit's tests copy it (with node_modules linked to
+# the kit's packages, as an install would) and break one file at a time; its scenarios, bugs and runs make the demo
+# portal.
+
+project:
+  language: typescript
+  runner: playwright
+  conventions: [docs/conventions.md]
+
+paths:
+  scenarios: test-scenarios
+  scenarioSchema: node_modules/@simpright/scenarios/schemas/scenarios.schema.json
+  bugs: bugs
+  bugSchema: node_modules/@simpright/scenarios/schemas/bug.schema.json
+  tests: tests
+  apiTests: tests/api
+  uiTests: tests/ui
+  pages: src/app/pages
+
+commands:
+  typecheck: npm run typecheck
+  validateScenarios: npx simpright-scenarios validate
+  runSpec: npx playwright test {spec}
+  runScenario: npx playwright test -g "{id}:"
+
+ids:
+  layers:
+    ui: { prefix: UI, digits: 3 }
+    api: { prefix: API, digits: 4 }
+  areas: [products, cart]
+  bugs: { prefix: BUG, digits: 3 }
+  fileNames:
+    api: "^(get|post|put|patch|delete)-{area}(-[a-z0-9]+)*$"
+
+roles: [default, guest]
+
+api:
+  exemplars:
+    client: src/app/productsClient.ts
+    service: src/app/productsClient.ts
+    dto: src/app/productsClient.ts
+    fixtures: src/app/index.ts
+    spec: tests/api/products/get-products.spec.ts
+  knownIssue: "test.fail(true, 'Known issue {bug}: {text}');"
+  rules:
+    - Every assertion carries a message.
+
+ui:
+  exemplars:
+    page: src/app/pages/homePage.ts
+    component: src/app/pages/homePage.ts
+    fixtures: src/app/index.ts
+    spec: tests/ui/products/product-search.spec.ts
+  knownIssue: "test.fail(true, 'Known issue {bug}: {text}');"
+  rules:
+    - Every assertion carries a message.
+
+liveApi:
+  writes: never
+
+parts:
+  scenarios: true
+  portal: { testCases: true, bugs: true }
+
+core:
+  files:
+    - src/core/base.ts
+    - src/core/helpers.ts
+    - src/core/types.ts
+    - docs/conventions.md
+  seams:
+    - src/config/project.ts
+
+ci:
+  branches: { default: main }
+  node: 24
+  secrets: [SHOP_USER, SHOP_PASSWORD]
+
+runs:
+  - id: ui-regression
+    label: UI regression
+    note: Latest nightly run
+    project: ui
+    schedule: '15 6 * * 1-5'
+    trend: ui
+  - id: api-regression
+    label: API regression
+    note: Latest nightly run
+    project: api
+    schedule: '15 2 * * 1-5'
+    trend: api
+    publishCoverage: true
+  - id: smoke
+    label: Smoke
+    note: UI + API
+    project: all
+    grep: '@smoke'
+  - id: custom-ui
+    label: Custom UI
+    note: Latest custom run
+    project: ui
+    areaPicker: true
+    keep: 5
+
+portal:
+  title: Sample Shop
+  titleAccent: Shop
+  tagline: SimpRight Kit demo
+  description: A made-up shop's UI and API tests, to show what the SimpRight Kit portal looks like.
+  healthThreshold: { ui: 1, api: 1 }

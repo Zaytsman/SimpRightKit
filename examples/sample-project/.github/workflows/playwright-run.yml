@@ -1,0 +1,43 @@
+name: Playwright run
+
+# The reusable test job: every run in simpright.yml has one caller of it.
+
+on:
+  workflow_call:
+    inputs:
+      project: { type: string, required: true }
+      family: { type: string, required: true }
+      grep: { type: string, default: '' }
+      paths: { type: string, default: '' }
+      keep-runs: { type: number, default: 10 }
+      publish-latest-coverage: { type: boolean, default: false }
+    secrets:
+      SHOP_USER: { required: true }
+      SHOP_PASSWORD: { required: true }
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js and install
+        uses: ./.github/actions/setup
+        with:
+          node-version: 24
+      - name: Run tests
+        run: npx playwright test
+      - name: Publish the report
+        uses: ./.github/actions/publish-run
+        with:
+          run-id: ${{ inputs.family }}
+          keep: ${{ inputs.keep-runs }}
+          latest-coverage: ${{ inputs.publish-latest-coverage }}
+          token: ${{ github.token }}

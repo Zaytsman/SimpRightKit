@@ -1,0 +1,13 @@
+name: Squash gh-pages
+description: Replaces the gh-pages history with one commit.
+
+inputs:
+  token:
+    description: A token that can push to gh-pages
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo squash

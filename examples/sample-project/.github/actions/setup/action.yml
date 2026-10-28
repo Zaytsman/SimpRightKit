@@ -1,0 +1,16 @@
+name: Set up Node.js and install
+description: Node.js and the project's dependencies.
+
+inputs:
+  node-version:
+    description: The Node.js version
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: ${{ inputs.node-version }}
+    - shell: bash
+      run: npm ci --ignore-scripts

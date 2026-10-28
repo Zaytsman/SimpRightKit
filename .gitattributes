@@ -1,0 +1,5 @@
+# Text files are stored with LF in the repository, whatever the contributor's core.autocrlf. Shell scripts keep LF in
+# the working tree too: they run on Linux runners. Screenshot baselines are binary.
+* text=auto
+*.sh text eol=lf
+*.png binary

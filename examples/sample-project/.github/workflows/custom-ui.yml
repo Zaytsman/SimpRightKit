@@ -1,0 +1,26 @@
+name: Custom UI
+
+on:
+  workflow_dispatch:
+    inputs:
+      area:
+        description: The tests to run
+        type: choice
+        options: [all, cart, products]
+        default: all
+      keep-runs:
+        description: How many runs stay on the portal
+        type: number
+        default: 5
+
+jobs:
+  test:
+    uses: ./.github/workflows/playwright-run.yml
+    with:
+      project: ui
+      family: custom-ui
+      paths: ${{ inputs.area != 'all' && format('tests/ui/{0}', inputs.area) || '' }}
+      keep-runs: ${{ inputs.keep-runs }}
+    secrets:
+      SHOP_USER: ${{ secrets.SHOP_USER }}
+      SHOP_PASSWORD: ${{ secrets.SHOP_PASSWORD }}

@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scenarios.schema.json",
+  "title": "Test scenarios",
+  "description": "One file per endpoint (API) or feature (UI) in <layer>/<area>/: a suite of scenarios. Key order inside a scenario: id, name, ref, tags, status, automatedIn, role, knownIssue, bug, preconditions, steps.",
+  "type": "object",
+  "required": ["suite", "tags", "scenarios"],
+  "additionalProperties": false,
+  "properties": {
+    "suite": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Suite name (maps to test.describe)."
+    },
+    "tags": {
+      "type": "array",
+      "description": "Tags for the whole suite: @<area> for UI (@cart), @<area>-api for API (@products-api). The spec's test.describe is titled '<tags joined by spaces> - <suite>'.",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^@[\\w-]+$" },
+      "uniqueItems": true
+    },
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/scenario" }
+    }
+  },
+  "definitions": {
+    "scenario": {
+      "type": "object",
+      "required": ["id", "name", "status", "steps"],
+      "additionalProperties": false,
+      "dependencies": { "knownIssue": ["bug"], "bug": ["knownIssue"] },
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z]+-\\d+$",
+          "description": "Unique scenario ID: <PREFIX>-<number>, numbered across the layer, with the prefix and digits from simpright.yml (ids.layers), e.g. API-0001 or UI-001. The test title starts with it."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Scenario name (the test title after the ID)."
+        },
+        "ref": {
+          "description": "Optional link to what the scenario comes from: a user story, bug or document (US-123, BUG-001, docs/ui/user-stories/Product_Detail.md#AC3), or a list of them.",
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "description": "Optional tags of this scenario's test, on top of the suite's: @smoke puts it in the smoke set (fast, reliable happy paths; automated, no knownIssue, only writes it cleans up). The test carries them as Playwright's tag option: test('<ID>: <name>', { tag: '@smoke' }, ...).",
+          "minItems": 1,
+          "items": { "type": "string", "enum": ["@smoke"] },
+          "uniqueItems": true
+        },
+        "status": {
+          "type": "string",
+          "enum": ["manual", "automated"],
+          "description": "manual (the default for a new scenario) or automated (set together with automatedIn when a spec automates it)."
+        },
+        "automatedIn": {
+          "type": "string",
+          "pattern": "\\.(spec|test)\\.[cm]?[jt]s$",
+          "description": "Path of the spec that automates this scenario. Required when status is automated, absent when it's manual."
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Role of the test, one of the profile's roles. Absent means the default user; guest means logged out."
+        },
+        "knownIssue": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How this scenario hits a known app bug: one sentence naming the wrong behaviour and the expected one. Needs bug; becomes the test's 'Known issue <bug>: <text>' annotation."
+        },
+        "bug": {
+          "type": "string",
+          "pattern": "^[A-Z]+-\\d+$",
+          "description": "The open bug (bugs/<ID>.yml) behind knownIssue, e.g. BUG-001; set together with knownIssue. Scenarios that hit the same root cause name the same bug."
+        },
+        "preconditions": {
+          "type": "array",
+          "description": "The state the test starts from, set up by a precondition fixture or setup code before the steps, not by a test step: the page that is open, the logged-in customer, the cart's contents, data created through the API. Each one is a statement, e.g. 'The home page is open.'.",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1, "not": { "pattern": "^Verify " } }
+        },
+        "steps": {
+          "type": "array",
+          "description": "Ordered steps. Checks are steps that start with 'Verify'.",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "contains": { "type": "string", "pattern": "^Verify " }
+        }
+      }
+    }
+  }
+}

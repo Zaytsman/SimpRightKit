@@ -1,0 +1,66 @@
+name: Demo portal
+
+# Publishes the sample site (the portal with the sample project's made-up runs) to this repository's GitHub Pages, the
+# live demo the README links. It runs on pushes to main that change what the site shows, and by hand. Pages must be
+# set to deploy from GitHub Actions (Settings → Pages → Source).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/portal/**'
+      - 'packages/simpright/**'
+      - 'examples/sample-project/**'
+      - 'scripts/sample-site.ts'
+      - '.github/workflows/demo.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Build the sample site
+        run: npm run sample:build
+
+      - name: Upload it for GitHub Pages
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: test-results/sample-site
+
+  # Only this job can deploy to Pages.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

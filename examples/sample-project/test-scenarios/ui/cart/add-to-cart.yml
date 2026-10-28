@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=../../../node_modules/@simpright/scenarios/schemas/scenarios.schema.json
+suite: Add to cart
+tags: ["@cart"]
+scenarios:
+  - id: UI-004
+    name: Adding a product shows it in the cart
+    status: automated
+    automatedIn: tests/ui/cart/add-to-cart.spec.ts
+    preconditions:
+      - A product page is open.
+    steps:
+      - Add the product to the cart.
+      - Verify the cart lists the product once.
+  - id: UI-005
+    name: The cart badge counts the items added
+    status: automated
+    automatedIn: tests/ui/cart/add-to-cart.spec.ts
+    knownIssue: The cart badge shows the number of lines, not the number of items.
+    bug: BUG-002
+    preconditions:
+      - A product page is open.
+    steps:
+      - Set the quantity to 3.
+      - Add the product to the cart.
+      - Verify the cart badge shows 3.

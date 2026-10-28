@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- The Bugs page: simpright-portal build-bugs copies it to bugs/ next to bugs-data.js (window.BUG_CATALOG).
+       It reads the latest regression results itself to flag bugs whose tests started passing. -->
+  <title>Bugs</title>
+  <!-- The portal's icon (the README banner's logo), inline like on the dashboard. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='10' fill='%233fb950'/%3E%3Cpath d='M11 23l8 8l15-17' fill='none' stroke='%23fff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* The portal's palette (index.html), from the README banner: GitHub's dark greys and greens. */
+    :root {
+      --bg: #0d1117;
+      --bg-end: #0e1813;
+      --inset: #010409;
+      --surface: #161b22;
+      --surface-2: #21262d;
+      --line: #30363d;
+      --line-soft: #21262d;
+      --line-bright: #8b949e;
+      --text: #e6edf3;
+      --text-strong: #f0f6fc;
+      --muted: #9198a1;
+      --green: #3fb950;
+      --green-hover: #56d364;
+      --green-bg: rgba(63, 185, 80, 0.12);
+      --green-line: rgba(63, 185, 80, 0.4);
+      --red: #f85149;
+      --red-text: #ffa198;
+      --red-bg: rgba(248, 81, 73, 0.1);
+      --red-line: rgba(248, 81, 73, 0.4);
+      --amber: #d29922;
+      --amber-text: #e3b341;
+      --amber-bg: rgba(210, 153, 34, 0.12);
+      --amber-line: rgba(210, 153, 34, 0.4);
+      --blue: #58a6ff;
+      --blue-text: #79c0ff;
+      --blue-bg: rgba(88, 166, 255, 0.1);
+      --blue-line: rgba(88, 166, 255, 0.35);
+      --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      background-image: linear-gradient(180deg, var(--bg) 0%, var(--bg-end) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--green); text-decoration: none; }
+    a:hover { color: var(--green-hover); }
+    button { font-family: inherit; }
+
+    :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+    /* Layout */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 420px minmax(0, 1fr);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar: header, filters, tree */
+    .sidebar-pane {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-width: 0;
+      background: rgba(13, 17, 23, 0.85);
+      border-right: 1px solid var(--line-soft);
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px 18px;
+      border-bottom: 1px solid var(--line-soft);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* The portal's logo, linking back to it. */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      align-self: flex-start;
+    }
+    .brand svg { flex: none; }
+    .brand-name {
+      display: block;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      color: var(--text-strong);
+    }
+    .brand-name span { color: var(--green); }
+    .brand-sub {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.1;
+      color: var(--muted);
+    }
+
+    .page-head { display: flex; flex-direction: column; gap: 4px; }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .back-link:hover { color: var(--text); }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .brand-title h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      color: var(--text-strong);
+      margin: 0;
+    }
+    .brand-tag {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 6px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text-strong);
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .kpi-card:hover { border-color: var(--line-bright); }
+    .kpi-card.active { border-color: var(--green-line); background: var(--green-bg); }
+    .kpi-card .num { display: block; font-size: 20px; font-weight: 700; line-height: 1.1; }
+    .kpi-card .lbl {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .num-auto { color: var(--green); }
+    .num-manual { color: var(--blue); }
+    .num-known { color: var(--amber); }
+
+    .filter-box {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--line-soft);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .search-input-wrap { position: relative; }
+    .search-input {
+      width: 100%;
+      min-height: 40px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 0 36px 0 36px;
+      outline: none;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-bg); }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .clear-search-btn {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .clear-search-btn:hover { color: var(--text); }
+
+    .filter-pills-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .filter-pills-container { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-pill {
+      min-height: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+    .filter-pill:hover { color: var(--text); border-color: var(--line-bright); }
+    .filter-pill.active { background: var(--green-bg); border-color: var(--green-line); color: var(--green); }
+    .filter-pill.active[data-status="manual"] { background: var(--blue-bg); border-color: var(--blue-line); color: var(--blue-text); }
+    .filter-pill.active[data-status="known"] { background: var(--amber-bg); border-color: var(--amber-line); color: var(--amber-text); }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* Tree */
+    .scenarios-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px 12px;
+    }
+    .scenarios-list::-webkit-scrollbar { width: 6px; }
+    .scenarios-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+
+    .tree-root-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 6px 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .tree-root-label .label-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-action {
+      min-height: 26px;
+      padding: 0 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+    .tree-action:hover { color: var(--text); border-color: var(--line-bright); }
+    .tree-group.collapsed > .tree-children { display: none; }
+    .tree-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      min-height: 36px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+      text-align: left;
+      color: var(--text-strong);
+      transition: background 0.15s ease;
+    }
+    .tree-label:hover { background: rgba(240, 246, 252, 0.04); }
+    .tree-label.area { font-size: 14px; font-weight: 700; }
+    .tree-label.file { font-size: 13px; font-weight: 500; color: var(--text); padding-left: 28px; }
+    .tree-label .label-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-label.file .label-text.endpoint { font-family: var(--mono); font-size: 12px; }
+    .tree-count {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+    }
+    .tree-toggle {
+      display: inline-flex;
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .tree-group.collapsed > .tree-label .tree-toggle { transform: rotate(-90deg); }
+
+    .tree-leaf {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      width: 100%;
+      min-height: 40px;
+      padding: 9px 8px 9px 52px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: none;
+      cursor: pointer;
+      text-align: left;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .tree-leaf:hover { background: rgba(240, 246, 252, 0.04); }
+    .tree-leaf.active { background: var(--green-bg); border-color: var(--green-line); color: var(--text-strong); }
+    /* Level with the first line of a wrapped name. */
+    .tree-leaf .status-dot { align-self: flex-start; margin-top: 6px; }
+    .tree-leaf .status-dot.automated { color: var(--green); }
+    .tree-leaf .status-dot.manual { color: var(--blue); }
+    .tree-leaf .leaf-id { font-family: var(--mono); font-size: 12px; color: var(--muted); flex-shrink: 0; }
+    .tree-leaf.active .leaf-id { color: var(--green); }
+    .tree-leaf .leaf-name { flex: 1; min-width: 0; line-height: 1.4; }
+    .tree-leaf .leaf-known { color: var(--amber); font-size: 12px; flex-shrink: 0; }
+
+    .list-empty { padding: 40px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+
+    .list-footer {
+      padding: 10px 20px;
+      border-top: 1px solid var(--line-soft);
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .list-footer code { font-family: var(--mono); }
+
+    /* Detail pane */
+    .detail-pane {
+      height: 100vh;
+      overflow-y: auto;
+      min-width: 0;
+    }
+    .detail-pane::-webkit-scrollbar { width: 8px; }
+    .detail-pane::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+    .detail-header {
+      padding: 28px 40px 0;
+      max-width: 1080px;
+    }
+    .detail-breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .detail-breadcrumbs .sep { color: var(--line-bright); }
+    .detail-breadcrumbs strong { color: var(--text-strong); font-weight: 600; }
+    .detail-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .detail-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      color: var(--text-strong);
+      margin: 0;
+    }
+    .header-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+
+    .btn-action {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      color: var(--text-strong);
+      font-size: 13px;
+      font-weight: 600;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .btn-action:hover { background: #292e36; border-color: var(--line-bright); }
+    .btn-action.copied { background: var(--green-bg); border-color: var(--green-line); color: var(--green); }
+    .btn-action.active { background: var(--green-bg); border-color: var(--green-line); color: var(--green); }
+
+    .meta-tags-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chip.id { font-family: var(--mono); font-weight: 500; color: var(--text-strong); background: var(--surface-2); border-radius: 6px; padding: 2px 8px; }
+    .chip.automated { color: var(--green); background: var(--green-bg); border-color: var(--green-line); }
+    .chip.manual { color: var(--blue-text); background: var(--blue-bg); border-color: var(--blue-line); }
+    .chip.known { color: var(--amber-text); background: var(--amber-bg); border-color: var(--amber-line); }
+    .chip.role { color: var(--muted); }
+    .chip.tag { font-family: var(--mono); font-weight: 500; color: var(--blue-text); background: rgba(88, 166, 255, 0.08); border-color: rgba(88, 166, 255, 0.25); border-radius: 6px; padding: 2px 8px; }
+
+    /* The banners sit side by side and wrap; a known issue or a re-check takes the whole row. */
+    #detail-banners {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin: 20px 40px 0;
+      max-width: 1000px;
+    }
+    #detail-banners:empty { display: none; }
+    .banner {
+      flex: 1 1 360px;
+      min-width: 0;
+      padding: 16px 18px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .banner.known { flex-basis: 100%; border-color: var(--amber-line); }
+    .banner.auto { border-color: var(--green-line); }
+    .banner.manual { border-color: var(--blue-line); }
+    .banner-left { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .banner-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text-strong); }
+    .banner.auto .banner-title { color: var(--green); }
+    .banner.manual .banner-title { color: var(--blue-text); }
+    .banner.known .banner-title { color: var(--amber-text); }
+    .banner-desc { font-size: 13px; color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; }
+    .banner-desc a:hover { text-decoration: underline; }
+    .banner-desc strong { color: var(--text); }
+    .banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .code {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      background: var(--bg);
+      padding: 1px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+    }
+    a .code { color: var(--green); }
+
+    .detail-tabs-bar {
+      margin: 20px 40px 0;
+      max-width: 1000px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border-bottom: 1px solid var(--line-soft);
+      padding-bottom: 8px;
+    }
+    .detail-tab {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+    .detail-tab:hover { color: var(--text); background: rgba(240, 246, 252, 0.04); }
+    .detail-tab.active { color: var(--green); background: var(--green-bg); }
+    .detail-tabs-bar .btn-action { margin-left: auto; }
+
+    .detail-content-area { padding: 20px 40px 48px; max-width: 1080px; }
+
+    .steps-container { display: flex; flex-direction: column; gap: 8px; }
+    .step-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+    .step-card:hover { border-color: var(--line-bright); }
+    .step-number {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--green-bg);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-text { font-size: 15px; line-height: 1.55; flex: 1; min-width: 0; overflow-wrap: anywhere; padding-top: 2px; }
+    .step-kw-action { color: var(--blue-text); font-weight: 600; }
+    .step-kw-verify { color: var(--green); font-weight: 600; }
+    .step-token-quote {
+      color: var(--amber-text);
+      background: rgba(210, 153, 34, 0.1);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 0.87em;
+    }
+    .step-token-endpoint { color: var(--blue-text); font-family: var(--mono); font-size: 0.87em; }
+
+    .yaml-container {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px 18px;
+      overflow-x: auto;
+    }
+    .yaml-pre { margin: 0; font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--text); white-space: pre; }
+    .yaml-key { color: var(--blue-text); }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty-state svg { width: 64px; height: 64px; stroke: var(--line-bright); margin-bottom: 20px; }
+    .empty-state h3 { font-size: 18px; color: var(--text-strong); margin: 0 0 8px; }
+    .empty-state p { font-size: 14px; max-width: 440px; line-height: 1.5; margin: 0; }
+
+    /* The list moves above the detail. */
+    @media (max-width: 1100px) {
+      .app-layout { display: flex; flex-direction: column; height: auto; overflow: visible; }
+      .sidebar-pane { height: auto; border-right: none; border-bottom: 1px solid var(--line-soft); }
+      .scenarios-list { max-height: 420px; }
+      .detail-pane { height: auto; overflow: visible; }
+      .empty-state { min-height: 260px; }
+    }
+
+    @media (max-width: 640px) {
+      .sidebar-header, .filter-box, .list-footer { padding-left: 16px; padding-right: 16px; }
+      .scenarios-list { padding-left: 8px; padding-right: 8px; }
+      .tree-leaf { padding-left: 36px; }
+      .detail-header { padding: 20px 16px 0; }
+      #detail-banners, .detail-tabs-bar { margin-left: 16px; margin-right: 16px; }
+      .banner { flex-basis: 100%; }
+      .detail-content-area { padding: 16px 16px 32px; }
+      .detail-title-row { flex-direction: column; gap: 12px; }
+      .detail-title { font-size: 22px; }
+      .kpi-card .lbl { font-size: 10px; }
+      .step-card { gap: 10px; padding: 10px 12px; }
+    }
+
+    /* Bugs page */
+    .num-open { color: var(--red); }
+    .num-recheck { color: var(--amber); }
+    .num-fixed { color: var(--green); }
+    .filter-pill.active[data-status="open"] { background: var(--red-bg); border-color: var(--red-line); color: var(--red-text); }
+    .filter-pill.active[data-status="recheck"] { background: var(--amber-bg); border-color: var(--amber-line); color: var(--amber-text); }
+    .filter-pill.active[data-status="fixed"] { background: var(--green-bg); border-color: var(--green-line); color: var(--green); }
+
+    .filter-selects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .filter-select {
+      width: 100%;
+      min-height: 36px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 0 8px;
+      outline: none;
+    }
+    .filter-select:focus { border-color: var(--green); }
+
+    /* Severity: red critical, amber major, blue minor, grey trivial. */
+    .sev-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; align-self: center; }
+    .tree-leaf .sev-dot { align-self: flex-start; margin-top: 6px; }
+    .sev-critical { color: var(--red); }
+    .sev-major { color: var(--amber); }
+    .sev-minor { color: var(--blue); }
+    .sev-trivial { color: var(--muted); }
+    .tree-leaf.bug { padding-left: 28px; }
+    .tree-label.status { font-size: 14px; font-weight: 700; }
+    .tree-leaf .leaf-recheck { color: var(--amber); font-size: 12px; flex-shrink: 0; }
+    .tree-leaf .leaf-tests { color: var(--muted); font-size: 11px; flex-shrink: 0; font-family: var(--mono); }
+
+    .chip.open { color: var(--red-text); background: var(--red-bg); border-color: var(--red-line); }
+    .chip.fixed { color: var(--green); background: var(--green-bg); border-color: var(--green-line); }
+    .chip.wont-fix { color: var(--muted); }
+    .chip.severity { text-transform: capitalize; }
+    .chip.severity.sev-critical { color: var(--red-text); background: var(--red-bg); border-color: var(--red-line); }
+    .chip.severity.sev-major { color: var(--amber-text); background: var(--amber-bg); border-color: var(--amber-line); }
+    .chip.severity.sev-minor { color: var(--blue-text); background: var(--blue-bg); border-color: var(--blue-line); }
+    .chip.date { font-family: var(--mono); font-weight: 500; }
+
+    .test-list { display: flex; flex-direction: column; gap: 6px; }
+    .test-row {
+      display: flex;
+      align-items: center;
+      gap: 8px 10px;
+      flex-wrap: wrap;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: var(--bg);
+    }
+    .test-row .test-id { font-family: var(--mono); font-size: 12px; }
+    .test-row .test-id:hover { text-decoration: underline; }
+    .test-row .test-name { color: var(--text); flex: 1; min-width: 12rem; }
+    .result-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .result-pill.fails { color: var(--red-text); background: var(--red-bg); border-color: var(--red-line); }
+    .result-pill.passed { color: var(--amber-text); background: var(--amber-bg); border-color: var(--amber-line); }
+    .result-pill.passes { color: var(--green); background: var(--green-bg); border-color: var(--green-line); }
+
+    .section { margin-bottom: 24px; }
+    .section h4 {
+      margin: 0 0 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .prose { margin: 0; font-size: 15px; line-height: 1.6; overflow-wrap: anywhere; max-width: 72ch; }
+    .outcome-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .outcome-card { padding: 14px 16px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+    .outcome-card .label {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 1px 8px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .outcome-card.expected .label { color: var(--green); background: var(--green-bg); }
+    .outcome-card.actual .label { color: var(--red-text); background: var(--red-bg); }
+    .yaml-pre.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+    @media (max-width: 640px) {
+      .outcome-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar-pane">
+      <div class="sidebar-header">
+        <!-- The portal's logo; it and the back link lead to the portal. -->
+        <a href="../index.html" class="brand">
+          <svg width="36" height="36" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="#3fb950"/><path d="M11 23l8 8l15-17" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><span class="brand-name" id="brand-name"></span><span class="brand-sub" id="brand-tagline"></span></span>
+        </a>
+        <div class="page-head">
+          <a href="../index.html" class="back-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Automation Portal
+          </a>
+          <div class="brand-title">
+            <h1>Bugs</h1>
+            <span class="brand-tag">App under test</span>
+          </div>
+        </div>
+        <div class="kpi-row">
+          <button type="button" class="kpi-card" data-status="all" title="Show all bugs">
+            <span class="num" id="kpi-total">-</span><span class="lbl">Total</span>
+          </button>
+          <button type="button" class="kpi-card" data-status="open" title="Show open bugs">
+            <span class="num num-open" id="kpi-open">-</span><span class="lbl">Open</span>
+          </button>
+          <button type="button" class="kpi-card" data-status="recheck" title="Show open bugs whose test passed in the latest regression">
+            <span class="num num-recheck" id="kpi-recheck">-</span><span class="lbl">Re-check</span>
+          </button>
+          <button type="button" class="kpi-card" data-status="fixed" title="Show fixed bugs">
+            <span class="num num-fixed" id="kpi-fixed">-</span><span class="lbl">Fixed</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="filter-box">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="bug-search" class="search-input" placeholder="Search ID, title, endpoint, scenario..." autocomplete="off" aria-label="Search bugs">
+          <button type="button" id="clear-search" class="clear-search-btn" title="Clear search" hidden>✕</button>
+        </div>
+        <div class="filter-pills-container" role="group" aria-label="Filter by status">
+          <button type="button" class="filter-pill active" data-status="all">All</button>
+          <button type="button" class="filter-pill" data-status="open"><span class="status-dot" style="color: var(--red)"></span>Open</button>
+          <button type="button" class="filter-pill" data-status="recheck"><span class="status-dot" style="color: var(--amber)"></span>Re-check</button>
+          <button type="button" class="filter-pill" data-status="fixed"><span class="status-dot" style="color: var(--green)"></span>Fixed</button>
+          <button type="button" class="filter-pill" data-status="wont-fix"><span class="status-dot" style="color: var(--muted)"></span>Won't fix</button>
+        </div>
+        <div class="filter-selects">
+          <select id="filter-severity" class="filter-select" aria-label="Filter by severity">
+            <option value="">All severities</option>
+            <option value="critical">Critical</option>
+            <option value="major">Major</option>
+            <option value="minor">Minor</option>
+            <option value="trivial">Trivial</option>
+          </select>
+          <select id="filter-layer" class="filter-select" aria-label="Filter by layer and area">
+            <option value="">All layers and areas</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="scenarios-list" id="bug-list"></div>
+
+      <div class="list-footer">
+        <span id="showing-count">Loading bugs...</span>
+        <span id="generated-info"></span>
+      </div>
+    </aside>
+
+    <main class="detail-pane">
+      <div id="empty-state" class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M8 2l1.9 1.9M16 2l-1.9 1.9M9 7.1V6a3 3 0 1 1 6 0v1.1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6zM12 20v-9M6 13H2M6 17l-3 2M18 13h4M18 17l3 2M6 9L3 7M18 9l3-2"/>
+        </svg>
+        <h3 id="empty-title">No bug selected</h3>
+        <p id="empty-text">Pick a bug in the list to see how to reproduce it, the tests that cover it and their latest result.</p>
+      </div>
+
+      <div id="bug-detail" hidden>
+        <header class="detail-header">
+          <div class="detail-breadcrumbs" id="detail-breadcrumbs"></div>
+          <div class="detail-title-row">
+            <h2 class="detail-title" id="detail-title"></h2>
+            <div class="header-actions">
+              <button type="button" class="btn-action" id="btn-copy-link" data-label="Copy link">Copy link</button>
+              <button type="button" class="btn-action" id="btn-copy-yaml" data-label="Copy YAML">Copy YAML</button>
+            </div>
+          </div>
+          <div class="meta-tags-row" id="detail-chips"></div>
+        </header>
+
+        <div id="detail-banners"></div>
+
+        <div class="detail-tabs-bar">
+          <button type="button" class="detail-tab active" data-tab="details">Details</button>
+          <button type="button" class="detail-tab" data-tab="yaml">YAML</button>
+        </div>
+
+        <div class="detail-content-area">
+          <div id="tab-details"></div>
+          <div id="tab-yaml" class="yaml-container" hidden><pre class="yaml-pre" id="yaml-content"></pre></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="bugs-data.js"></script>
+  <script>
+    (function () {
+      const catalog = window.BUG_CATALOG;
+      const $ = (id) => document.getElementById(id);
+      const CHEVRON = '<span class="tree-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></span>';
+      const STATUS_GROUPS = [['open', 'Open'], ['fixed', 'Fixed'], ['wont-fix', "Won't fix"]];
+
+      const state = {
+        selectedId: null,
+        tab: 'details',
+        search: '',
+        status: 'all',
+        severity: '',
+        layerArea: '',
+        closed: new Set(),
+        // Scenario ID -> its test's result in the latest regression of its layer.
+        results: new Map(),
+        resultsInfo: [],
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      // A project file's page on GitHub; projectPath is the project's folder in the repository ('' at its root).
+      function blobUrl(file, line) {
+        const [filePath, anchor] = file.split('#');
+        return `${catalog.repoUrl}/blob/${catalog.branch}/${catalog.projectPath ?? ''}${filePath}${line ? `#L${line}` : anchor ? `#${anchor.toLowerCase()}` : ''}`;
+      }
+
+      function formatDate(iso) {
+        return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+
+      // The portal's brand from the data file (simpright.yml portal): the title, its accent (the end of it) in green, the tagline.
+      function renderBrand(portal) {
+        if (!portal) return;
+        const accent = portal.titleAccent && portal.title.endsWith(portal.titleAccent) ? portal.titleAccent : '';
+        const name = $('brand-name');
+        name.textContent = portal.title.slice(0, portal.title.length - accent.length);
+        if (accent) {
+          const span = document.createElement('span');
+          span.textContent = accent;
+          name.appendChild(span);
+        }
+        $('brand-tagline').textContent = portal.tagline || '';
+      }
+
+      function init() {
+        if (!catalog) {
+          $('showing-count').textContent = 'No bug data found.';
+          $('empty-title').textContent = 'No bug data';
+          $('empty-text').textContent = 'bugs-data.js is missing. Build it with npm run bugs:build.';
+          return;
+        }
+        document.title = catalog.portal ? `${catalog.portal.title} - ${catalog.title}` : catalog.title;
+        renderBrand(catalog.portal);
+        const layerAreas = [...new Set(catalog.bugs.map((b) => `${b.layer}/${b.area}`))].sort();
+        $('filter-layer').insertAdjacentHTML('beforeend', layerAreas
+          .map((key) => {
+            const [layer, area] = key.split('/');
+            return `<option value="${escapeHtml(key)}">${escapeHtml(`${catalog.layers[layer] ?? layer} / ${area}`)}</option>`;
+          })
+          .join(''));
+
+        const commit = catalog.commit ? catalog.commit.slice(0, 7) : '';
+        $('generated-info').innerHTML = `Updated ${escapeHtml(formatDate(catalog.generatedAt))}` +
+          (commit ? ` · <a href="${escapeHtml(`${catalog.repoUrl}/commit/${catalog.commit}`)}" target="_blank" rel="noreferrer"><code>${escapeHtml(commit)}</code></a>` : '');
+
+        bindEvents();
+        readHash();
+        render();
+        loadResults().then(render);
+      }
+
+      // run-summary.json (@simpright/portal's run summaries): the run's stats and, per scenario ID, its test's last status.
+      async function loadResults() {
+        await Promise.all(catalog.regressions.map(async (regression) => {
+          try {
+            const response = await fetch(regression.results);
+            if (!response.ok) return;
+            const summary = await response.json();
+            const ranAt = summary.stats?.startTime;
+            state.resultsInfo.push({ ...regression, ranAt });
+            Object.entries(summary.tests || {}).forEach(([id, test]) => {
+              state.results.set(id, { last: test.status, expectedStatus: test.expectedStatus, ranAt, regression });
+            });
+          } catch (error) {
+            console.debug(`No results at ${regression.results}`, error);
+          }
+        }));
+      }
+
+      /** How a scenario's test did in the latest regression: fails (the bug is still there), passed (a known issue passed), passes, skipped or none. */
+      function resultOf(scenario) {
+        const result = state.results.get(scenario.id);
+        if (!result) return { kind: 'none', text: scenario.status === 'manual' ? 'Manual' : 'Not in the latest run' };
+        const when = result.ranAt ? ` on ${formatDate(result.ranAt)}` : '';
+        if (result.last === 'skipped') return { kind: 'none', text: 'Skipped', title: `${result.regression.label}${when}` };
+        const passed = result.last === 'passed';
+        if (result.expectedStatus === 'failed') {
+          return passed
+            ? { kind: 'passed', text: 'Passed: re-check', title: `The known-issue test passed in the ${result.regression.label}${when}` }
+            : { kind: 'fails', text: 'Bug still there', title: `The known-issue test failed as expected in the ${result.regression.label}${when}` };
+        }
+        return passed
+          ? { kind: 'passes', text: 'Passes', title: `${result.regression.label}${when}` }
+          : { kind: 'fails', text: 'Fails', title: `${result.regression.label}${when}` };
+      }
+
+      function needsRecheck(bug) {
+        return bug.status === 'open' && bug.scenarios.some((s) => resultOf(s).kind === 'passed');
+      }
+
+      function bindEvents() {
+        $('bug-search').addEventListener('input', (e) => {
+          state.search = e.target.value.trim().toLowerCase();
+          $('clear-search').hidden = !state.search;
+          render();
+        });
+        $('clear-search').addEventListener('click', () => {
+          $('bug-search').value = '';
+          state.search = '';
+          $('clear-search').hidden = true;
+          $('bug-search').focus();
+          render();
+        });
+        document.querySelectorAll('[data-status]').forEach((button) => {
+          button.addEventListener('click', () => setStatus(button.dataset.status));
+        });
+        $('filter-severity').addEventListener('change', (e) => { state.severity = e.target.value; render(); });
+        $('filter-layer').addEventListener('change', (e) => { state.layerArea = e.target.value; render(); });
+        document.querySelectorAll('.detail-tab').forEach((tab) => {
+          tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+        });
+        $('btn-copy-yaml').addEventListener('click', (e) => copy(e.currentTarget, selected()?.yaml ?? ''));
+        $('btn-copy-link').addEventListener('click', (e) => copy(e.currentTarget, location.href));
+        window.addEventListener('hashchange', () => {
+          readHash();
+          render();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            move(e.key === 'ArrowDown' ? 1 : -1);
+          }
+        });
+      }
+
+      function setStatus(status) {
+        state.status = status;
+        document.querySelectorAll('[data-status]').forEach((b) => b.classList.toggle('active', b.dataset.status === status && (b.classList.contains('filter-pill') || status !== 'all')));
+        render();
+      }
+
+      function matches(bug) {
+        if (state.status === 'recheck' && !needsRecheck(bug)) return false;
+        if (!['all', 'recheck'].includes(state.status) && bug.status !== state.status) return false;
+        if (state.severity && bug.severity !== state.severity) return false;
+        if (state.layerArea && `${bug.layer}/${bug.area}` !== state.layerArea) return false;
+        if (!state.search) return true;
+        const text = [bug.id, bug.title, bug.status, bug.severity, bug.layer, bug.area, bug.description ?? '', bug.expected, bug.actual,
+          ...bug.affects, ...bug.steps, ...bug.ref, ...bug.scenarios.flatMap((s) => [s.id, s.name])]
+          .join(' ')
+          .toLowerCase();
+        return text.includes(state.search);
+      }
+
+      function visible() {
+        // The list shows the bugs grouped by status, in the catalog's order inside each group.
+        return STATUS_GROUPS.flatMap(([status]) => catalog.bugs.filter((b) => b.status === status && matches(b)));
+      }
+
+      function selected() {
+        return catalog.bugs.find((b) => b.id === state.selectedId);
+      }
+
+      function render() {
+        const { stats } = catalog;
+        $('kpi-total').textContent = stats.total;
+        $('kpi-open').textContent = stats.open;
+        $('kpi-recheck').textContent = catalog.bugs.filter(needsRecheck).length;
+        $('kpi-fixed').textContent = stats.fixed;
+
+        const shown = visible();
+        if (!shown.some((b) => b.id === state.selectedId)) state.selectedId = shown[0]?.id ?? null;
+        renderList(shown);
+        const loaded = state.resultsInfo.length
+          ? ` · results: ${state.resultsInfo.map((r) => `${r.layer.toUpperCase()} ${r.ranAt ? formatDate(r.ranAt) : ''}`).join(', ')}`
+          : '';
+        $('showing-count').textContent = `Showing ${shown.length} of ${catalog.bugs.length} bugs${loaded}`;
+        const bug = selected();
+        if (bug) renderDetail(bug);
+        else showEmpty(shown.length === 0 && catalog.bugs.length > 0);
+      }
+
+      function renderList(shown) {
+        const list = $('bug-list');
+        list.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        for (const [status, label] of STATUS_GROUPS) {
+          const bugs = shown.filter((b) => b.status === status);
+          if (bugs.length === 0) continue;
+          const key = `status:${status}`;
+          const open = !state.closed.has(key);
+          const el = document.createElement('div');
+          el.className = `tree-group${open ? '' : ' collapsed'}`;
+          const header = document.createElement('button');
+          header.type = 'button';
+          header.className = 'tree-label status';
+          header.setAttribute('aria-expanded', String(open));
+          header.innerHTML = `${CHEVRON}<span class="label-text">${escapeHtml(label)}</span><span class="tree-count">${bugs.length}</span>`;
+          header.addEventListener('click', () => {
+            const nowOpen = el.classList.toggle('collapsed') === false;
+            header.setAttribute('aria-expanded', String(nowOpen));
+            nowOpen ? state.closed.delete(key) : state.closed.add(key);
+          });
+          const children = document.createElement('div');
+          children.className = 'tree-children';
+          bugs.forEach((bug) => children.appendChild(leaf(bug)));
+          el.append(header, children);
+          fragment.appendChild(el);
+        }
+        if (shown.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'list-empty';
+          empty.textContent = catalog.bugs.length ? 'No bugs match the filters.' : 'No bugs recorded.';
+          fragment.appendChild(empty);
+        }
+        list.appendChild(fragment);
+      }
+
+      function leaf(bug) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = `tree-leaf bug${bug.id === state.selectedId ? ' active' : ''}`;
+        item.dataset.id = bug.id;
+        item.title = `${bug.id}: ${bug.title}`;
+        const tests = bug.scenarios.length;
+        item.innerHTML =
+          `<span class="sev-dot sev-${escapeHtml(bug.severity)}" title="${escapeHtml(bug.severity)}"></span>` +
+          `<span class="leaf-id">${escapeHtml(bug.id)}</span>` +
+          `<span class="leaf-name">${escapeHtml(bug.title)}</span>` +
+          (needsRecheck(bug) ? '<span class="leaf-recheck" title="A test passed in the latest regression: re-check">⟳</span>' : '') +
+          `<span class="leaf-tests" title="${tests} scenario(s)">${tests}</span>`;
+        item.addEventListener('click', () => select(bug.id));
+        return item;
+      }
+
+      function select(id) {
+        state.selectedId = id;
+        const bug = selected();
+        if (bug) state.closed.delete(`status:${bug.status}`);
+        history.replaceState(null, '', `#bug=${encodeURIComponent(id)}`);
+        render();
+        document.querySelector('.tree-leaf.active')?.scrollIntoView({ block: 'nearest' });
+      }
+
+      function move(direction) {
+        const shown = visible();
+        if (shown.length === 0) return;
+        const index = shown.findIndex((b) => b.id === state.selectedId);
+        select(shown[Math.min(Math.max(index + direction, 0), shown.length - 1)].id);
+      }
+
+      function readHash() {
+        const id = new URLSearchParams(location.hash.slice(1)).get('bug');
+        if (id && catalog.bugs.some((b) => b.id === id)) state.selectedId = id;
+      }
+
+      function showEmpty(filteredOut) {
+        $('empty-state').hidden = false;
+        $('bug-detail').hidden = true;
+        $('empty-title').textContent = filteredOut ? 'Nothing matches' : 'No bug selected';
+        $('empty-text').textContent = filteredOut
+          ? 'No bug matches the search and filters. Clear them to see every bug.'
+          : 'Pick a bug in the list to see how to reproduce it, the tests that cover it and their latest result.';
+      }
+
+      function code(text) {
+        return `<span class="code">${escapeHtml(text)}</span>`;
+      }
+
+      function fileLink(file, line) {
+        return `<a href="${escapeHtml(blobUrl(file, line))}" target="_blank" rel="noreferrer">${code(line ? `${file.split('#')[0]}:${line}` : file)}</a>`;
+      }
+
+      function renderDetail(bug) {
+        $('empty-state').hidden = true;
+        $('bug-detail').hidden = false;
+
+        $('detail-breadcrumbs').innerHTML =
+          `<span>${escapeHtml(catalog.title)}</span><span class="sep">/</span>` +
+          `<span>${escapeHtml(catalog.layers[bug.layer] ?? bug.layer)}</span><span class="sep">/</span>` +
+          `<strong>${escapeHtml(bug.area)}</strong>`;
+        $('detail-title').textContent = bug.title;
+
+        const statusLabel = STATUS_GROUPS.find(([s]) => s === bug.status)?.[1] ?? bug.status;
+        let chips = `<span class="chip id">${escapeHtml(bug.id)}</span>`;
+        chips += `<span class="chip ${escapeHtml(bug.status)}"><span class="status-dot"></span>${escapeHtml(statusLabel)}</span>`;
+        chips += `<span class="chip severity sev-${escapeHtml(bug.severity)}" title="Severity"><span class="sev-dot"></span>${escapeHtml(bug.severity)}</span>`;
+        if (needsRecheck(bug)) chips += '<span class="chip known">⟳ Re-check</span>';
+        chips += `<span class="chip date" title="Found">Found ${escapeHtml(bug.found)}</span>`;
+        if (bug.resolved) chips += `<span class="chip date" title="Resolved">Resolved ${escapeHtml(bug.resolved)}</span>`;
+        $('detail-chips').innerHTML = chips;
+
+        renderBanners(bug);
+        renderDetails(bug);
+        $('yaml-content').innerHTML = escapeHtml(bug.yaml).replace(/^(\s*-?\s*)([A-Za-z]+):/gm, '$1<span class="yaml-key">$2</span>:');
+        switchTab(state.tab);
+      }
+
+      function renderBanners(bug) {
+        const banners = $('detail-banners');
+        banners.innerHTML = '';
+
+        const passed = bug.scenarios.filter((s) => resultOf(s).kind === 'passed');
+        if (bug.status === 'open' && passed.length) {
+          banners.appendChild(banner('known', 'Re-check: the bug may be fixed',
+            `${passed.map((s) => code(s.id)).join(' ')} passed in the latest regression although ${passed.length === 1 ? 'it expects' : 'they expect'} this bug. ` +
+            `Re-check it with ${code(`/report-bug recheck ${bug.id}`)}: if the app is fixed, the bug is closed (<span class="code">status: fixed</span>) and its scenarios and tests lose the known issue.`));
+        }
+
+        const rows = bug.scenarios.map((s) => {
+          const result = resultOf(s);
+          const testCases = `../test-cases/${encodeURIComponent(s.layer)}/#scenario=${encodeURIComponent(s.id)}`;
+          return `<div class="test-row"><a class="test-id" href="${escapeHtml(testCases)}" target="_blank" rel="noreferrer" title="Open in the Test Cases page">${escapeHtml(s.id)}</a>` +
+            `<span class="test-name">${escapeHtml(s.name)}</span>` +
+            `<span class="result-pill ${result.kind}" title="${escapeHtml(result.title ?? '')}">${escapeHtml(result.text)}</span>` +
+            (s.automatedIn ? fileLink(s.automatedIn, s.specLine) : '') + '</div>';
+        });
+        const regressionLinks = state.resultsInfo
+          .map((r) => `<a href="${escapeHtml(r.report)}" target="_blank" rel="noreferrer">${escapeHtml(r.label)}</a>${r.ranAt ? ` (${escapeHtml(formatDate(r.ranAt))})` : ''}`)
+          .join(', ');
+        banners.appendChild(banner('refs', `Tests (${bug.scenarios.length})`,
+          rows.length
+            ? `<div class="test-list">${rows.join('')}</div>` +
+              (regressionLinks ? `<div style="margin-top: 0.5rem">Results from the latest ${regressionLinks}.</div>` : '<div style="margin-top: 0.5rem">No regression results available here, so the latest results aren\'t shown.</div>')
+            : 'No scenario names this bug yet. A scenario that hits it gets <span class="code">knownIssue</span> and <span class="code">bug: ' + escapeHtml(bug.id) + '</span>.'));
+
+        const refs = bug.ref.map((ref) => (/^(docs|src|tests|test-scenarios)\//.test(ref) ? fileLink(ref) : code(ref)));
+        banners.appendChild(banner('refs', 'Source',
+          `Affects: ${bug.affects.map(code).join(' ')}` +
+          `<br>Bug file: ${fileLink(bug.file)}` +
+          (refs.length ? `<br>Expected behaviour from: ${refs.join(' ')}` : '') +
+          (bug.upstream ? `<br>Reported upstream: <a href="${escapeHtml(bug.upstream)}" target="_blank" rel="noreferrer">${escapeHtml(bug.upstream)}</a>` : '')));
+      }
+
+      function banner(kind, title, descHtml) {
+        const el = document.createElement('div');
+        el.className = `banner ${kind}`;
+        el.innerHTML = `<div class="banner-left"><div class="banner-title">${escapeHtml(title)}</div><div class="banner-desc">${descHtml}</div></div>`;
+        return el;
+      }
+
+      function formatStep(raw) {
+        let text = escapeHtml(raw);
+        text = text.replace(/&quot;(.*?)&quot;/g, '<span class="step-token-quote">&quot;$1&quot;</span>');
+        text = text.replace(/\b(GET|POST|PUT|PATCH|DELETE|QUERY) (\/[^\s,;:)]*[^\s,.;:)])/g, '<span class="step-token-endpoint">$1 $2</span>');
+        text = text.replace(/^(Open|Click|Select|Enter|Set|Search|Send|Create|Add|Remove|Log in|Register|Type|Check|Clear|Pick|Go to|Compare)\b/, '<span class="step-kw-action">$1</span>');
+        return text;
+      }
+
+      function renderDetails(bug) {
+        let html = '';
+        if (bug.description) html += `<div class="section"><h4>Description</h4><p class="prose">${escapeHtml(bug.description)}</p></div>`;
+        html += `<div class="section"><h4>Steps to reproduce (${bug.steps.length})</h4><div class="steps-container">` +
+          bug.steps.map((step, i) => `<div class="step-card"><div class="step-number">${i + 1}</div><div class="step-text">${formatStep(step)}</div></div>`).join('') +
+          '</div></div>';
+        html += '<div class="section"><div class="outcome-grid">' +
+          `<div class="outcome-card expected"><span class="label">Expected</span><p class="prose">${formatStep(bug.expected)}</p></div>` +
+          `<div class="outcome-card actual"><span class="label">Actual</span><p class="prose">${formatStep(bug.actual)}</p></div>` +
+          '</div></div>';
+        if (bug.evidence) html += `<div class="section"><h4>Evidence</h4><div class="yaml-container"><pre class="yaml-pre wrap">${escapeHtml(bug.evidence)}</pre></div></div>`;
+        $('tab-details').innerHTML = html;
+      }
+
+      function switchTab(tab) {
+        state.tab = tab;
+        document.querySelectorAll('.detail-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
+        $('tab-details').hidden = tab !== 'details';
+        $('tab-yaml').hidden = tab !== 'yaml';
+      }
+
+      function copy(button, text) {
+        const done = () => {
+          button.classList.add('copied');
+          button.textContent = 'Copied';
+          setTimeout(() => {
+            button.classList.remove('copied');
+            button.textContent = button.dataset.label;
+          }, 1500);
+        };
+        if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => {});
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
