@@ -2,7 +2,7 @@
 
 The kit's packages share one version; each release lists what changed in each of them.
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-10-28)
 
 The first release: SimpRight's validator, step-title check and portal scripts, as packages.
 
