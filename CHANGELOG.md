@@ -2,7 +2,7 @@
 
 The kit's packages share one version; each release lists what changed in each of them.
 
-## 0.2.0 (unreleased)
+## 0.2.0 (2026-10-30)
 
 The CI part: SimpRight's GitHub Actions as the kit's own, and `simpright apply` to write the workflows that use them. After upgrading a project that ran `apply`, run it again.
 
