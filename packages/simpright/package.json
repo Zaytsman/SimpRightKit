@@ -1,6 +1,6 @@
 {
   "name": "simpright",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The SimpRight Kit's command-line tool: `simpright doctor` checks a project's setup. Also simpright.yml's schema and reader for the kit's other packages.",
   "keywords": [
     "simpright",
