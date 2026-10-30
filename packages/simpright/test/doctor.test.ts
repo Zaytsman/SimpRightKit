@@ -156,8 +156,8 @@ const cases: Case[] = [
   },
   {
     name: "the kit's packages at different versions",
-    change: (p) => p.write('node_modules/@simpright/portal/package.json', JSON.stringify({ name: '@simpright/portal', version: '0.1.1' })),
-    expect: ["package.json: the kit's packages must share one version (one kit release): simpright 0.1.0, @simpright/scenarios 0.1.0, @simpright/portal 0.1.1"],
+    change: (p) => p.write('node_modules/@simpright/portal/package.json', JSON.stringify({ name: '@simpright/portal', version: '9.9.9' })),
+    expect: [`package.json: the kit's packages must share one version (one kit release): simpright ${VERSION}, @simpright/scenarios ${VERSION}, @simpright/portal 9.9.9`],
   },
   // The runs and their workflows
   {
