@@ -1,0 +1,55 @@
+name: Run the tests
+description: >-
+  Runs one Playwright project (or all of them), optionally narrowed to spec paths and a grep, then, when asked, checks
+  the tests' step titles against their scenarios. Fails when the tests fail; the step-title check only warns. Part of
+  the SimpRight Kit's CI (actions/README.md).
+
+inputs:
+  project:
+    description: 'The Playwright project: ui, api, or all (both in one run, e.g. the smoke set)'
+    required: true
+  paths:
+    description: 'Spec folders or files to run, separated by spaces (empty: the whole project)'
+    required: false
+    default: ''
+  grep:
+    description: 'Only run tests whose title matches (e.g. a scenario ID)'
+    required: false
+    default: ''
+  check-step-titles:
+    description: "'true': check the step titles against the scenarios (simpright-scenarios check-step-titles, from @simpright/scenarios; reads Playwright's JSON report)"
+    required: false
+    default: 'false'
+  working-directory:
+    description: "The project's folder in the repository (default: the repository's root)"
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - name: Run tests
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        # Read by the template's coverage loader: UI runs only hit the API to log in, and a mixed run (all) covers a few
+        # endpoints only, so their API coverage would be misleading.
+        DISABLE_API_COVERAGE: ${{ inputs.project != 'api' && 'true' || 'false' }}
+        PROJECT: ${{ inputs.project }}
+        SPEC_PATHS: ${{ inputs.paths }}
+        GREP: ${{ inputs.grep }}
+      run: |
+        args=()
+        [ "$PROJECT" != all ] && args+=(--project="$PROJECT")
+        [ -n "$GREP" ] && args+=(--grep "$GREP")
+        # SPEC_PATHS is a space-separated list of spec folders/files.
+        npx --no-install playwright test "${args[@]}" $SPEC_PATHS
+
+    # Warns (an annotation per test) when a test's step titles aren't its scenario's steps verbatim. It runs after
+    # failed tests too, and never fails the action.
+    - name: Check step titles
+      if: ${{ !cancelled() && inputs.check-step-titles == 'true' }}
+      continue-on-error: true
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npx --no-install simpright-scenarios check-step-titles

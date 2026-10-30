@@ -6,12 +6,16 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { KIT, sampleProject, type Project } from '../../../test/helpers.ts';
+import { apply } from '../src/apply.ts';
 import { ConfigError, readConfig } from '../src/config.ts';
 import { doctor, parseJsonc, type DoctorOptions, type DoctorResult } from '../src/doctor.ts';
+import { currentKit, type Kit } from '../src/kit.ts';
 
 const SETUP = '.github/actions/setup/action.yml';
 const SETUP_NODE = 'uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0';
 const CLI = path.join(KIT, 'packages/simpright/dist/cli.js');
+/** The kit packages' version, which the sample's node_modules has too. */
+const VERSION = (JSON.parse(readFileSync(path.join(KIT, 'packages/simpright/package.json'), 'utf8')) as { version: string }).version;
 
 /** Runs doctor (offline unless the options say otherwise) on a sample project changed by `change`. */
 async function check(change: (project: Project) => void, options: DoctorOptions = { offline: true }): Promise<DoctorResult> {
@@ -232,7 +236,7 @@ describe('simpright doctor', () => {
     assert.deepEqual(result.problems, []);
     assert.deepEqual(result.notes, [
       'Config OK: simpright.yml matches its schema, and every path it names exists.',
-      'Kit OK: simpright, @simpright/scenarios, @simpright/portal at 0.1.0.',
+      `Kit OK: simpright, @simpright/scenarios, @simpright/portal at ${VERSION}.`,
       'Runs OK: 4 run(s), each with its workflow.',
       'Core OK: 4 file(s), the code importing only each other, 1 seam(s) and packages.',
     ]);
@@ -272,6 +276,68 @@ describe('simpright doctor', () => {
     } finally {
       project.dispose();
     }
+  });
+});
+
+describe("simpright doctor: the files apply generates and the kit's actions", () => {
+  const COMMIT = 'b'.repeat(40);
+  const RELEASE: Kit = { ...currentKit(), version: VERSION, commit: COMMIT };
+  const SQUASH = '.github/workflows/squash-gh-pages.yml';
+  const SQUASH_PIN = `squash-pages@${COMMIT} # v${VERSION}`;
+
+  /** Doctor on a sample project after its first apply (with `applyKit`), changed by `change`, with `doctorKit`. */
+  async function checkApplied(change: (project: Project) => void, { applyKit = RELEASE, doctorKit = RELEASE } = {}): Promise<DoctorResult> {
+    const project = sampleProject();
+    try {
+      project.remove('.github');
+      apply(project.root, readConfig(project.root), { kit: applyKit, kitRef: applyKit.commit ?? COMMIT });
+      change(project);
+      return await doctor(project.root, readConfig(project.root), { offline: true, kit: doctorKit });
+    } finally {
+      project.dispose();
+    }
+  }
+
+  it('passes the sample project after apply', async () => {
+    const result = await checkApplied(() => {});
+    assert.deepEqual(result.problems, []);
+    assert.ok(result.notes.some((note) => new RegExp(`^Kit actions OK: \\d+ step\\(s\\) at v${VERSION.replace(/\./g, '\\.')}, commit bbbbbbb\\.$`).test(note)), result.notes.join('\n'));
+    assert.ok(result.notes.includes('Generated OK: 9 file(s) as simpright apply writes them (.simpright/state.json).'), result.notes.join('\n'));
+  });
+
+  const applied: Case[] = [
+    { name: 'a generated file changed by hand', change: (p) => p.edit('.github/workflows/pr-checks.yml', 'timeout-minutes: 15', 'timeout-minutes: 20'), expect: [`.github/workflows/pr-checks.yml: differs from what simpright apply writes (kit ${VERSION})`] },
+    { name: 'a generated file deleted', change: (p) => p.remove(SQUASH), expect: [`${SQUASH}: missing: simpright apply writes it`] },
+    {
+      name: 'a new test folder before apply ran again',
+      change: (p) => p.write('tests/ui/checkout/checkout.spec.ts', ''),
+      expect: ['.github/workflows/custom-ui.yml: differs from what simpright apply writes', 'the area input must be a choice of all, then the folders in tests/ui: cart, checkout, products'],
+    },
+    {
+      name: 'a removed run whose workflow is left',
+      change: (p) => p.edit('simpright.yml', "  - id: smoke\n    label: Smoke\n    note: UI + API\n    project: all\n    grep: '@smoke'\n", ''),
+      expect: ['.github/workflows/smoke.yml: simpright apply no longer writes it', 'publishes the family smoke, which has no entry in simpright.yml runs'],
+    },
+    { name: 'a part apply needs more for', change: (p) => p.edit('simpright.yml', 'parts:\n  scenarios: true\n', 'parts:\n  scenarios: true\n  wiki: true\n'), expect: ['simpright.yml: parts.wiki needs paths.wiki'] },
+    { name: "a kit action pinned to a tag", change: (p) => p.edit(SQUASH, SQUASH_PIN, 'squash-pages@v1'), expect: [`${SQUASH}: uses Zaytsman/SimpRightKit/actions/squash-pages@v1: pin the kit's actions to a full commit SHA`], unexpected: ['differs from what'] },
+    { name: 'a kit action pinned without its version', change: (p) => p.edit(SQUASH, SQUASH_PIN, `squash-pages@${COMMIT}`), expect: [`without its version in a comment (# v${VERSION})`] },
+    { name: "the kit's actions at two releases", change: (p) => p.edit(SQUASH, SQUASH_PIN, `squash-pages@${'c'.repeat(40)} # v${VERSION}`), expect: ["the kit's actions are pinned at more than one release"] },
+    { name: 'a kit action input the action lacks', change: (p) => p.edit(SQUASH, 'token: ${{ github.token }}', 'tokn: ${{ github.token }}'), expect: [`${SQUASH} (job squash): passes tokn to Zaytsman/SimpRightKit/actions/squash-pages, which has no such input (the kit's actions/squash-pages/action.yml)`, 'must pass token to Zaytsman/SimpRightKit/actions/squash-pages'] },
+    { name: 'a kit action that the kit lacks', change: (p) => p.edit(SQUASH, SQUASH_PIN, `squash-pagez@${COMMIT} # v${VERSION}`), expect: [`uses Zaytsman/SimpRightKit/actions/squash-pagez@${COMMIT}, but kit ${VERSION} has no such action`] },
+    { name: "another Node version through the kit's setup", change: (p) => p.edit('.github/workflows/pr-checks.yml', 'node-version: 24', 'node-version: 22'), expect: ['.github/workflows/pr-checks.yml (job verify): sets up Node 22, but ci.node in simpright.yml is 24'] },
+  ];
+  for (const testCase of applied) {
+    it(`finds ${testCase.name}`, async () => assertProblems(await checkApplied(testCase.change), testCase.expect, testCase.unexpected));
+  }
+
+  it("finds the kit's actions pinned at another release than the installed packages", async () => {
+    const result = await checkApplied(() => {}, { applyKit: { ...RELEASE, version: '0.0.9' } });
+    assertProblems(result, [`the kit's actions are pinned at v0.0.9, but the installed kit is ${VERSION}`]);
+  });
+
+  it("finds the kit's actions pinned at a commit that isn't the release's", async () => {
+    const result = await checkApplied(() => {}, { doctorKit: { ...RELEASE, commit: 'c'.repeat(40) } });
+    assertProblems(result, [`the kit's actions are pinned at bbbbbbb, but kit ${VERSION} is commit ccccccc`]);
   });
 });
 

@@ -25,7 +25,11 @@ updates:
       prefix: "deps"
 
   - package-ecosystem: "github-actions"
-    directory: "/"
+    # "/" covers the workflows. A composite action that uses other actions needs its own entry (only setup today):
+    # a glob like /actions/* would also match lib/, which has no action.yml.
+    directories:
+      - "/"
+      - "/actions/setup"
     schedule:
       interval: "weekly"
     cooldown:

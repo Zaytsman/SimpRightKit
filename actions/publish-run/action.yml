@@ -1,0 +1,41 @@
+name: Publish the run's report
+description: >-
+  Publishes this run's Playwright report to the gh-pages branch (GitHub Pages) under its run's folder, keeps the latest
+  runs and refreshes the portal. simpright-portal publish-run (@simpright/portal, installed in the project) writes the
+  files; publish-run.sh does the git steps. Part of the SimpRight Kit's CI (actions/README.md).
+
+inputs:
+  run-id:
+    description: "The run's id in simpright.yml runs: its folder on GitHub Pages, e.g. daily-ui-regression"
+    required: true
+  keep:
+    description: "How many runs of it stay on GitHub Pages; older ones are removed (empty: the run's keep in simpright.yml, else 10)"
+    required: false
+    default: ''
+  latest-coverage:
+    description: "'true': also publish this run's API coverage as latest/api-coverage"
+    required: false
+    default: 'false'
+  token:
+    description: 'A token that can push to gh-pages (github.token with contents: write). Only this step gets it.'
+    required: true
+  working-directory:
+    description: "The project's folder in the repository (default: the repository's root)"
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - name: Publish to gh-pages
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        FAMILY: ${{ inputs.run-id }}
+        KEEP_RUNS: ${{ inputs.keep }}
+        LATEST_COVERAGE: ${{ inputs.latest-coverage }}
+      run: |
+        args=("$FAMILY")
+        [ "$LATEST_COVERAGE" = true ] && args+=(--latest-coverage)
+        bash "$GITHUB_ACTION_PATH/publish-run.sh" "${args[@]}"

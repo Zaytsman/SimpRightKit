@@ -2,13 +2,14 @@
 
 The installable parts of [SimpRight](https://github.com/Zaytsman/SimpRight), a TypeScript + Playwright test framework for UI and API tests with AI QA agents. A project starts from [SimpRightTemplate](https://github.com/Zaytsman/SimpRightTemplate), the framework's core as source you own, and adds the parts it wants. Each part is a versioned package you update, not code you copy.
 
-| Package | What it does | Commands |
+| Part | What it does | Commands |
 |---|---|---|
-| [`simpright`](packages/simpright) | Checks that a project's setup is consistent: `simpright.yml`, the paths and parts it names, the test runs against the GitHub workflows, the core files against the template. Holds `simpright.yml`'s schema. | `simpright doctor` |
+| [`simpright`](packages/simpright) | Writes the project's CI workflows from `simpright.yml`, and checks that the setup is consistent: `simpright.yml`, the paths and parts it names, the test runs against the GitHub workflows, the generated files, the core files against the template. Holds `simpright.yml`'s schema. | `simpright apply`, `simpright doctor` |
 | [`@simpright/scenarios`](packages/scenarios) | Test scenarios and bugs as YAML files: their schemas, and checks that keep them and the Playwright specs in sync. | `simpright-scenarios validate`, `simpright-scenarios check-step-titles` |
 | [`@simpright/portal`](packages/portal) | A static dashboard for Playwright runs (run history, trends, known issues) with Test Cases and Bugs pages, published into any folder, such as a `gh-pages` branch. | `simpright-portal publish-run`, `simpright-portal build-pages` |
+| [The CI actions](actions) | GitHub Actions composite actions: install, run the tests, publish the run and the pages to GitHub Pages, squash the `gh-pages` history, publish a wiki. `simpright apply` writes the workflows that use them. | `uses: Zaytsman/SimpRightKit/actions/<name>@<commit>` |
 
-The three packages share one version (one kit release), need Node.js 22 or later, and read the project's `simpright.yml`.
+The packages and the actions share one version (one kit release). The packages need Node.js 22 or later, and everything reads the project's `simpright.yml`.
 
 ## Quick start
 
@@ -16,12 +17,13 @@ In a project made from SimpRightTemplate (or any Playwright project with a `simp
 
 ```bash
 npm install --save-dev simpright @simpright/scenarios @simpright/portal
+npx simpright apply --dry-run      # the CI workflows simpright.yml asks for; without --dry-run, written
 npx simpright doctor
 npx simpright-scenarios validate
 npx simpright-portal build-pages --site .gh-pages
 ```
 
-Each package's README lists what it checks or writes and the `simpright.yml` keys it reads.
+Each part's README lists what it checks or writes and the `simpright.yml` keys it reads.
 
 ## See it working
 
@@ -30,7 +32,7 @@ Each package's README lists what it checks or writes and the `simpright.yml` key
 
 ## Status
 
-Version 0.1: the parts that were scripts in SimpRight, as packages. Next come the GitHub Actions and a workflow generator (`simpright apply`), the QA agents as Claude Code plugins, and a setup assistant that asks the questions and runs `apply` and `doctor`.
+Version 0.2: the GitHub Actions and the workflows `simpright apply` writes for them, on top of 0.1's packages (the parts that were scripts in SimpRight). Next come the QA agents as Claude Code plugins, and a setup assistant that asks the questions and runs `apply` and `doctor`.
 
 ## Development
 

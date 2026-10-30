@@ -1,0 +1,74 @@
+name: Set up Node.js and install
+description: >-
+  Sets up Node.js with the npm cache, installs the project's dependencies with npm ci --ignore-scripts and, when asked,
+  the Playwright browsers (cached by the lockfile's hash). Part of the SimpRight Kit's CI (actions/README.md).
+
+# The workflow checks out the project first (with persist-credentials: false): this action installs what it finds there.
+inputs:
+  node-version:
+    description: 'The Node.js major version: ci.node in simpright.yml (simpright doctor checks every workflow that uses this action)'
+    required: true
+  registry-url:
+    description: 'A registry for one scope, e.g. https://npm.pkg.github.com for an optional private package (empty: none)'
+    required: false
+    default: ''
+  scope:
+    description: "The scope that registry serves, e.g. '@my-org'"
+    required: false
+    default: ''
+  registry-token:
+    description: "The token npm ci sends to that registry (NODE_AUTH_TOKEN). Without access, as in forks, npm skips an optional package from it"
+    required: false
+    default: ''
+  omit-optional:
+    description: "'true': npm ci --omit=optional, which also leaves out optional platform packages such as TypeScript's compiler"
+    required: false
+    default: 'false'
+  browsers:
+    description: 'The Playwright browsers to install, separated by spaces, e.g. chromium (empty: none, as for API runs)'
+    required: false
+    default: ''
+  working-directory:
+    description: "The project's folder in the repository, where its package.json is (default: the repository's root)"
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+
+    # No dependency needs an install script, so none runs while NODE_AUTH_TOKEN is set.
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.registry-token }}
+        OMIT_OPTIONAL: ${{ inputs.omit-optional }}
+      run: |
+        args=(ci --ignore-scripts)
+        [ "$OMIT_OPTIONAL" = true ] && args+=(--omit=optional)
+        npm "${args[@]}"
+
+    - name: Cache Playwright browsers
+      if: inputs.browsers != ''
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ inputs.browsers }}-${{ hashFiles(format('{0}/package-lock.json', inputs.working-directory)) }}
+
+    - name: Install Playwright browsers
+      if: inputs.browsers != ''
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      # BROWSERS is a space-separated list of browser names; the project's own Playwright installs them.
+      run: npx --no-install playwright install --with-deps $BROWSERS

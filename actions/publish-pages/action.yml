@@ -1,0 +1,24 @@
+name: Publish the portal's pages
+description: >-
+  Rebuilds the Test Cases pages, the Bugs page and the dashboard on the gh-pages branch (GitHub Pages).
+  simpright-portal build-pages (@simpright/portal, installed in the project) writes the files; publish-pages.sh does
+  the git steps. Part of the SimpRight Kit's CI (actions/README.md).
+
+inputs:
+  token:
+    description: 'A token that can push to gh-pages (github.token with contents: write). Only this step gets it.'
+    required: true
+  working-directory:
+    description: "The project's folder in the repository (default: the repository's root)"
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - name: Build and publish
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: bash "$GITHUB_ACTION_PATH/publish-pages.sh"

@@ -50,6 +50,7 @@
         "userStories": { "$ref": "#/definitions/path", "description": "User stories, bug reports and acceptance criteria: input for the requirements analyst and the UI scenario writer." },
         "analysis": { "$ref": "#/definitions/path", "description": "Analysis documents with test plans, one per work item, written by the requirements analyst." },
         "testData": { "$ref": "#/definitions/path", "description": "Test data: shared constants and factories." },
+        "wiki": { "$ref": "#/definitions/path", "description": "The wiki's pages (parts.wiki): published to the repository's GitHub wiki." },
         "coverageSummary": { "$ref": "#/definitions/path", "description": "API coverage summary; generated, so it may not exist." }
       }
     },
@@ -285,7 +286,7 @@
             }
           ]
         },
-        "wiki": { "type": "boolean", "description": "docs/wiki published to the repository's GitHub wiki." }
+        "wiki": { "type": "boolean", "description": "The pages in paths.wiki published to the repository's GitHub wiki." }
       }
     },
     "core": {
@@ -311,7 +312,7 @@
     },
     "ci": {
       "type": "object",
-      "description": "Facts about the GitHub Actions workflows; simpright doctor checks them against .github/workflows/ and the local actions in .github/actions/.",
+      "description": "Facts about the GitHub Actions workflows: simpright apply writes the CI part's workflows from them, and simpright doctor checks them against .github/workflows/, the kit's actions and the local actions in .github/actions/.",
       "required": ["node", "secrets"],
       "additionalProperties": false,
       "properties": {
@@ -335,7 +336,7 @@
     },
     "runs": {
       "type": "array",
-      "description": "The test runs: one report family on GitHub Pages each, run by one caller of .github/workflows/playwright-run.yml. simpright doctor checks every caller against its entry.",
+      "description": "The test runs: one report family on GitHub Pages each, run by one caller of .github/workflows/playwright-run.yml. simpright apply writes the callers; simpright doctor checks every caller against its entry.",
       "minItems": 1,
       "items": {
         "type": "object",
@@ -343,7 +344,8 @@
         "additionalProperties": false,
         "properties": {
           "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "description": "The report family: its folder on GitHub Pages and its workflow's family input." },
-          "label": { "type": "string", "minLength": 1, "description": "The name the portal shows." },
+          "label": { "type": "string", "minLength": 1, "description": "The name the portal shows; simpright apply also names the run's workflow after it." },
+          "workflow": { "type": "string", "pattern": "^[A-Za-z0-9][\\w.-]*\\.ya?ml$", "description": "The file name of the run's caller in .github/workflows/ (default: <id>.yml). Keep it once the workflow has run: GitHub numbers a workflow's runs per file, and the portal keeps a family's highest run numbers." },
           "note": { "type": "string", "minLength": 1, "description": "The line under the label in the portal's side panel." },
           "project": { "enum": ["ui", "api", "all"], "description": "The Playwright project, or all for both in one run." },
           "schedule": { "type": "string", "pattern": "^\\S+( \\S+){4}$", "description": "A cron in UTC. Without one, the run is started by hand only; every run can be." },

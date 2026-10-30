@@ -1,5 +1,5 @@
-// Prepares a kit release: one version in every package, the packages' pins on each other, the lockfile, and the date
-// of the CHANGELOG's entry. It changes files only; committing, tagging and pushing stay explicit steps (CONTRIBUTING.md).
+// Prepares a kit release: one version in every package, the packages' pins on each other, the lockfiles (the kit's and
+// the sample project's), and the date of the CHANGELOG's entry. It changes files only; committing, tagging and pushing stay explicit steps (CONTRIBUTING.md).
 // Run with `npm run release -- <version>`, e.g. `npm run release -- 0.2.0`. CHANGELOG.md must have a
 // "## <version> (unreleased)" entry.
 
@@ -45,12 +45,16 @@ for (const { file, json } of manifests) {
 const today = new Date().toISOString().slice(0, 10);
 writeFileSync(changelogFile, changelog.replace(unreleased, `## ${version} (${today})`));
 
-// The lockfile records the workspaces' versions; npm's own script, as `npm run` gives it.
+// The lockfiles record the packages' versions: the kit's own (the workspaces) and the sample project's (the packages it
+// links for the e2e workflow). npm's own script, as `npm run` gives it.
 const npmCli = process.env.npm_execpath;
 if (!npmCli) throw new Error('Run this with npm run release.');
-execFileSync(process.execPath, [npmCli, 'install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: KIT, stdio: 'inherit' });
+for (const cwd of [KIT, path.join(KIT, 'examples/sample-project')]) {
+  execFileSync(process.execPath, [npmCli, 'install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd, stdio: 'inherit' });
+}
 
-console.log(`Set ${[...names].join(', ')} to ${version}, and the CHANGELOG entry to ${today}. Next:
-  git commit -am "Release v${version}"
+console.log(`Set ${[...names].join(', ')} to ${version}, and the CHANGELOG entry to ${today}. Next (CONTRIBUTING.md):
+  git commit -am "Release v${version}"     # on a release branch; open a pull request and merge it
+  git switch main && git pull --ff-only
   git tag -a v${version} -m "SimpRight Kit v${version}"
-  git push origin main v${version}     # the Release workflow publishes after your approval`);
+  git push origin v${version}              # the Release workflow publishes after your approval`);

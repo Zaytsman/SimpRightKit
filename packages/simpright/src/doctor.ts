@@ -9,10 +9,14 @@
 //   coverage publishing and the runs it keeps; an areaPicker run's area input offers all plus the folders of its
 //   project's tests; a run with a trend runs that layer, one run per layer, with a portal.healthThreshold for each;
 // - the reusable workflow declares exactly ci.secrets, and its callers pass them by name;
-// - every workflow step that uses a local action (./.github/actions/<name>) finds its action.yml, and passes the
-//   action's required inputs and no inputs it doesn't declare;
-// - every actions/setup-node step, in a workflow or in a local action, sets up ci.node (a local action's step that
-//   reads the version from an input: as each workflow step that uses the action passes it), and at least one does;
+// - every workflow step that uses a local action (./.github/actions/<name>) or one of the kit's actions
+//   (Zaytsman/SimpRightKit/actions/<name>) finds it, and passes the action's required inputs and no inputs it doesn't
+//   declare; the kit's actions are pinned to a full commit SHA with the version in a comment, all at one version: the
+//   installed kit's, at its release commit when this simpright knows it (a published package);
+// - every actions/setup-node step, in a workflow or in an action it uses, sets up ci.node (an action's step that reads
+//   the version from an input: as each workflow step that uses the action passes it), and at least one does;
+// - when simpright apply has run (.simpright/state.json), the files it generates are what it would write now, apart
+//   from the pins, and none it no longer writes is left;
 // - every core file and seam (core) exists, and a core code file imports only core files, the seams and packages
 //   (relative imports and the tsconfig.json path aliases are followed; comments are skipped; a document such as
 //   the conventions isn't scanned);
@@ -22,7 +26,10 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { CONFIG_FILE, type Config, type Run } from './config.ts';
+import { CONFIG_FILE, ConfigError, type Config, type Run } from './config.ts';
+import { generateCi, type GeneratedFile } from './generate.ts';
+import { currentKit, KIT_ACTIONS, type Kit } from './kit.ts';
+import { readState, STATE_FILE, withoutRefs } from './state.ts';
 import {
   ACTIONS_DIR,
   callersOf,
@@ -47,6 +54,8 @@ export interface DoctorOptions {
   offline?: boolean;
   /** Reads the template's files (tests pass a stub); the global fetch by default. */
   fetch?: typeof fetch;
+  /** The kit release this simpright belongs to (tests pass their own); this package's by default. */
+  kit?: Kit;
 }
 
 export interface DoctorResult {
@@ -70,12 +79,29 @@ export async function doctor(root: string, config: Config, options: DoctorOption
   if (result.problems.length > 0) return result;
   result.notes.push(`Config OK: ${CONFIG_FILE} matches its schema, and every path it names exists.`);
 
-  const kit = checkKitVersions(root, fail);
-  if (kit) result.notes.push(kit);
+  const kit = options.kit ?? currentKit();
+  const installed = checkKitVersions(root, fail);
+  if (installed) result.notes.push(`Kit OK: ${installed.names.join(', ')} at ${installed.version}.`);
 
   const before = result.problems.length;
-  checkRunsAndWorkflows(root, config, exists, fail);
+  checkRunsAndWorkflows(root, config, kit, exists, fail);
   if (config.runs && result.problems.length === before) result.notes.push(`Runs OK: ${config.runs.length} run(s), each with its workflow.`);
+
+  if (config.runs || config.ci) {
+    const beforePins = result.problems.length;
+    const pins = checkKitPins(root, installed?.version ?? kit.version, kit, read, fail);
+    if (pins && result.problems.length === beforePins) result.notes.push(`Kit actions OK: ${pins.steps} step(s) at ${pins.version}, commit ${pins.ref.slice(0, 7)}.`);
+  }
+
+  const beforeGenerated = result.problems.length;
+  const generated = checkGenerated(root, config, kit, exists, read, fail);
+  if (generated !== undefined) {
+    if (result.problems.length === beforeGenerated) {
+      result.notes.push(`Generated OK: ${generated} file(s) as simpright apply writes them (${STATE_FILE}).`);
+    } else {
+      result.hints.push(`Run simpright apply: it writes the CI part's files from ${CONFIG_FILE} (a changed config, a new test folder or a new kit version changes them).`);
+    }
+  }
 
   const { core } = config;
   if (core) {
@@ -137,8 +163,8 @@ function checkConfig(config: Config, exists: Exists, fail: Fail): void {
 
 // --- The kit's packages ---
 
-/** The versions of the kit's packages installed for the project (resolved from it, as Node would); a note when they agree. */
-function checkKitVersions(root: string, fail: Fail): string | undefined {
+/** The kit's packages installed for the project (resolved from it, as Node would) and their one version, when they agree. */
+function checkKitVersions(root: string, fail: Fail): { names: string[]; version: string } | undefined {
   const require = createRequire(path.join(root, 'package.json'));
   const installed = KIT_PACKAGES.flatMap((name) => {
     try {
@@ -154,7 +180,79 @@ function checkKitVersions(root: string, fail: Fail): string | undefined {
     fail('package.json', `the kit's packages must share one version (one kit release): ${installed.map(({ name, version }) => `${name} ${version}`).join(', ')}`);
     return undefined;
   }
-  return `Kit OK: ${installed.map(({ name }) => name).join(', ')} at ${installed[0]?.version}.`;
+  return { names: installed.map(({ name }) => name), version: installed[0]!.version };
+}
+
+/** A step that uses one of the kit's actions: the action, its ref and the comment after it (the version). */
+const KIT_USES = /^\s*(?:-\s+)?uses:\s*(Zaytsman\/SimpRightKit\/actions\/[\w.-]+)@(\S+?)(?:[ \t]+#[ \t]*(\S+))?[ \t]*$/gm;
+
+/**
+ * Checks the pins of the kit's actions in the workflows (read as text: the version is a comment): each a full commit
+ * SHA with its version, all one release, the installed kit's (`version`), at its commit when `kit` knows it. Returns
+ * the steps and their pin, or undefined when no workflow uses the kit's actions.
+ */
+function checkKitPins(root: string, version: string, kit: Kit, read: Read, fail: Fail): { steps: number; ref: string; version: string } | undefined {
+  const dir = path.join(root, '.github/workflows');
+  if (!existsSync(dir)) return undefined;
+  const pins = new Map<string, string>();
+  let steps = 0;
+  for (const name of readdirSync(dir).filter((file) => /\.ya?ml$/.test(file)).sort()) {
+    const file = `.github/workflows/${name}`;
+    for (const [, action, ref, comment] of read(file).replace(/\r\n/g, '\n').matchAll(KIT_USES)) {
+      steps++;
+      if (!/^[0-9a-f]{40}$/.test(ref!)) {
+        fail(file, `uses ${action}@${ref}: pin the kit's actions to a full commit SHA, with the version in a comment`);
+      } else if (!comment) {
+        fail(file, `uses ${action}@${ref} without its version in a comment (# v${version})`);
+      } else {
+        pins.set(`${ref} ${comment}`, file);
+      }
+    }
+  }
+  if (steps === 0) return undefined;
+  if (pins.size > 1) {
+    fail('.github/workflows', `the kit's actions are pinned at more than one release: ${[...pins].map(([pin, file]) => `${pin} (${file})`).join(', ')}`);
+    return undefined;
+  }
+  const [only] = [...pins.keys()];
+  if (!only) return undefined;
+  const [ref = '', comment = ''] = only.split(' ');
+  if (comment !== `v${version}`) {
+    fail('.github/workflows', `the kit's actions are pinned at ${comment}, but the installed kit is ${version}: one kit release (simpright apply writes the pins)`);
+  } else if (kit.commit && kit.version === version && ref !== kit.commit) {
+    fail('.github/workflows', `the kit's actions are pinned at ${ref.slice(0, 7)}, but kit ${version} is commit ${kit.commit.slice(0, 7)}`);
+  }
+  return { steps, ref, version: comment };
+}
+
+/**
+ * When simpright apply has run (.simpright/state.json), checks that the files it generates are what it would write now
+ * (apart from the pins) and that none it no longer writes is left. Returns the number of generated files, or undefined
+ * when apply hasn't run here.
+ */
+function checkGenerated(root: string, config: Config, kit: Kit, exists: Exists, read: Read, fail: Fail): number | undefined {
+  const state = readState(root);
+  if (!state) return undefined;
+  let files: GeneratedFile[];
+  try {
+    // The pins don't count, so any commit does.
+    files = generateCi(root, config, { kit, kitRef: '0'.repeat(40) });
+  } catch (error) {
+    if (!(error instanceof ConfigError)) throw error;
+    for (const problem of error.problems) {
+      const at = problem.indexOf(': ');
+      fail(problem.slice(0, at), problem.slice(at + 2));
+    }
+    return 0;
+  }
+  for (const { file, text } of files) {
+    if (!exists(file)) fail(file, 'missing: simpright apply writes it');
+    else if (withoutRefs(read(file)) !== withoutRefs(text)) fail(file, `differs from what simpright apply writes (kit ${kit.version})`);
+  }
+  for (const file of Object.keys(state.files)) {
+    if (!files.some((generated) => generated.file === file) && exists(file)) fail(file, 'simpright apply no longer writes it (it removes it)');
+  }
+  return files.length;
 }
 
 // --- Runs and workflows ---
@@ -164,10 +262,14 @@ const EXPRESSION = /^\$\{\{[\s\S]*\}\}$/;
 /** A step value that is just one of the action's inputs: ${{ inputs.<name> }}. */
 const INPUT_VALUE = /^\$\{\{\s*inputs\.([A-Za-z_][\w-]*)\s*\}\}$/;
 
-/** The local action a step uses (`./.github/actions/<name>`, without a trailing slash), or undefined. */
-const localActionOf = (uses: string | undefined) => (uses?.startsWith('./') ? uses.replace(/\/+$/, '') : undefined);
+/**
+ * The action a step uses, as the actions map names it: a local one as `./.github/actions/<name>` (without a trailing
+ * slash), a kit one as `Zaytsman/SimpRightKit/actions/<name>` (without its @<ref>); undefined for any other step.
+ */
+const actionOf = (uses: string | undefined) =>
+  uses?.startsWith('./') ? uses.replace(/\/+$/, '') : uses?.startsWith(KIT_ACTIONS) ? uses.replace(/@.*$/, '') : undefined;
 
-function checkRunsAndWorkflows(root: string, config: Config, exists: Exists, fail: Fail): void {
+function checkRunsAndWorkflows(root: string, config: Config, kit: Kit, exists: Exists, fail: Fail): void {
   const { runs, paths } = config;
 
   /** The folders directly under `dir` (relative to the project root), sorted. */
@@ -190,7 +292,9 @@ function checkRunsAndWorkflows(root: string, config: Config, exists: Exists, fai
     if (run.grep !== undefined ? grep !== run.grep : grep !== undefined && !EXPRESSION.test(String(grep))) {
       fail(where, run.grep !== undefined ? `grep must be '${run.grep}', the run's grep` : `grep is '${String(grep)}', but the run has none (only an input may set one)`);
     }
-    if (Boolean(settings['publish-latest-coverage']) !== Boolean(run.publishCoverage)) {
+    // Without a portal nothing is published, so the coverage and the runs kept don't apply.
+    const portal = Boolean(config.parts?.portal);
+    if (portal && Boolean(settings['publish-latest-coverage']) !== Boolean(run.publishCoverage)) {
       fail(where, `publish-latest-coverage must be ${run.publishCoverage ? 'true (the run publishes its coverage)' : 'left out (the run has no publishCoverage)'}`);
     }
     const crons = (on.schedule ?? []).map((entry) => entry.cron);
@@ -225,7 +329,7 @@ function checkRunsAndWorkflows(root: string, config: Config, exists: Exists, fai
           : String(keepSetting).includes('inputs.keep-runs')
             ? inputs['keep-runs']?.default
             : undefined;
-    if (Number(keep) !== (run.keep ?? DEFAULT_KEEP)) {
+    if (portal && Number(keep) !== (run.keep ?? DEFAULT_KEEP)) {
       fail(where, `keeps ${String(keep)} runs, but the run's keep is ${run.keep ?? DEFAULT_KEEP}`);
     }
 
@@ -239,6 +343,16 @@ function checkRunsAndWorkflows(root: string, config: Config, exists: Exists, fai
   const invalidYaml = (file: string, error: Error) => fail(file, `invalid YAML: ${error.message}`);
   const workflows = runs || config.ci ? readWorkflows(root, invalidYaml) : new Map<string, Workflow>();
   const actions = readActions(root, invalidYaml);
+  // The kit's actions the workflows use, as this simpright's kit release declares them.
+  for (const workflow of workflows.values()) {
+    for (const job of Object.values(workflow.jobs ?? {})) {
+      for (const step of job.steps ?? []) {
+        const ref = actionOf(step.uses);
+        const action = ref?.startsWith(KIT_ACTIONS) ? kit.actions[ref.slice(KIT_ACTIONS.length)] : undefined;
+        if (ref && action) actions.set(ref, { file: `the kit's actions/${ref.slice(KIT_ACTIONS.length)}/action.yml`, action });
+      }
+    }
+  }
   if (runs) {
     const runsAt = `${CONFIG_FILE} runs`;
 
@@ -284,22 +398,24 @@ function checkRunsAndWorkflows(root: string, config: Config, exists: Exists, fai
       if (!callers.has(run.id)) fail(runsAt, `${run.id}: no workflow calls ${TEST_WORKFLOW} with family ${run.id}`);
     }
   }
-  checkLocalActionSteps(workflows, actions, exists, fail);
+  checkActionSteps(workflows, actions, kit, exists, fail);
   if (config.ci) checkNodeVersion(config.ci.node, workflows, actions, fail);
 }
 
-/** Checks every workflow step that uses a local action: the action exists, and gets its required inputs and no others. */
-function checkLocalActionSteps(workflows: Map<string, Workflow>, actions: Map<string, LocalAction>, exists: Exists, fail: Fail): void {
+/** Checks every workflow step that uses a local or a kit action: the action exists, and gets its required inputs and no others. */
+function checkActionSteps(workflows: Map<string, Workflow>, actions: Map<string, LocalAction>, kit: Kit, exists: Exists, fail: Fail): void {
   for (const [file, workflow] of workflows) {
     for (const [name, job] of Object.entries(workflow.jobs ?? {})) {
       for (const step of job.steps ?? []) {
-        const ref = localActionOf(step.uses);
+        const ref = actionOf(step.uses);
         if (!ref) continue;
         const where = `${file} (job ${name})`;
         const local = actions.get(ref);
         if (!local) {
-          // An action.yml that isn't valid YAML has its own error.
-          if (!['action.yml', 'action.yaml'].some((fileName) => exists(`${ref.slice(2)}/${fileName}`))) {
+          if (ref.startsWith(KIT_ACTIONS)) {
+            fail(where, `uses ${String(step.uses)}, but kit ${kit.version} has no such action (it has ${listOf(Object.keys(kit.actions))})`);
+          } else if (!['action.yml', 'action.yaml'].some((fileName) => exists(`${ref.slice(2)}/${fileName}`))) {
+            // An action.yml that isn't valid YAML has its own error.
             fail(where, `uses ${String(step.uses)}, but there's no local action there (${ACTIONS_DIR}/<name>/action.yml)`);
           }
           continue;
@@ -318,9 +434,10 @@ function checkLocalActionSteps(workflows: Map<string, Workflow>, actions: Map<st
 }
 
 /**
- * Checks that every actions/setup-node step sets up ci.node: in a workflow by its node-version; in a local action by
- * its node-version or, when that is one of the action's inputs, by what each workflow step that uses the action
- * passes (or the input's default). Some step must set up Node, so the check never passes with nothing to check.
+ * Checks that every actions/setup-node step sets up ci.node: in a workflow by its node-version; in an action a workflow
+ * uses (a local one, or the kit's) by its node-version or, when that is one of the action's inputs, by what each
+ * workflow step that uses the action passes (or the input's default). Some step must set up Node, so the check never
+ * passes with nothing to check.
  */
 function checkNodeVersion(node: number, workflows: Map<string, Workflow>, actions: Map<string, LocalAction>, fail: Fail): void {
   let setupSteps = 0;
@@ -362,9 +479,9 @@ function checkNodeVersion(node: number, workflows: Map<string, Workflow>, action
           setupSteps++;
           check(file, step.with?.['node-version']);
         }
-        const ref = localActionOf(step.uses);
+        const ref = actionOf(step.uses);
         const input = ref ? versionInputs.get(ref) : undefined;
-        // Left out, the input's default applies (checked above); a missing required input is checkLocalActionSteps'.
+        // Left out, the input's default applies (checked above); a missing required input is checkActionSteps'.
         if (input && step.with?.[input] !== undefined) check(`${file} (job ${name})`, step.with[input]);
       }
     }
