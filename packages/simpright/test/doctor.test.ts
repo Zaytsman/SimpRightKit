@@ -301,7 +301,8 @@ describe("simpright doctor: the files apply generates and the kit's actions", ()
   it('passes the sample project after apply', async () => {
     const result = await checkApplied(() => {});
     assert.deepEqual(result.problems, []);
-    assert.ok(result.notes.some((note) => new RegExp(`^Kit actions OK: \\d+ step\\(s\\) at v${VERSION.replace(/\./g, '\\.')}, commit bbbbbbb\\.$`).test(note)), result.notes.join('\n'));
+    // The kit's steps: setup, run-tests and publish-run; setup in pr-checks; setup and publish-pages; squash-pages.
+    assert.ok(result.notes.includes(`Kit actions OK: 7 step(s) at v${VERSION}, commit bbbbbbb.`), result.notes.join('\n'));
     assert.ok(result.notes.includes('Generated OK: 9 file(s) as simpright apply writes them (.simpright/state.json).'), result.notes.join('\n'));
   });
 

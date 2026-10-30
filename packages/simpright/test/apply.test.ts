@@ -160,8 +160,8 @@ describe('simpright apply', () => {
       assert.equal(result.written, true);
       assert.equal(result.changes.find((change) => change.file === '.github/workflows/pr-checks.yml')?.action, 'unchanged');
       assert.equal(result.changes.find((change) => change.file === '.github/workflows/squash-gh-pages.yml')?.action, 'update');
-      assert.match(project.read('.github/workflows/pr-checks.yml'), new RegExp(newer.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')));
-      assert.match(project.read('.github/workflows/squash-gh-pages.yml'), new RegExp(CHECKOUT.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')));
+      assert.ok(project.read('.github/workflows/pr-checks.yml').includes(newer), 'the newer pin stays');
+      assert.ok(project.read('.github/workflows/squash-gh-pages.yml').includes(CHECKOUT), "the older pin becomes the kit's");
     } finally {
       project.dispose();
     }
@@ -179,7 +179,7 @@ describe('simpright apply', () => {
         ['.github/dependabot.yml', '.github/workflows/api-regression.yml', '.github/workflows/custom-ui.yml', '.github/workflows/smoke.yml', '.github/workflows/ui-regression.yml'],
       );
       assert.ok(moved.changes.every((change) => change.action === 'update' || change.action === 'unchanged'));
-      assert.match(project.read('.github/workflows/pr-checks.yml'), new RegExp(`Zaytsman/SimpRightKit/actions/setup@${'f'.repeat(40)} # v9\\.9\\.10`));
+      assert.ok(project.read('.github/workflows/pr-checks.yml').includes(`Zaytsman/SimpRightKit/actions/setup@${'f'.repeat(40)} # v9.9.10`), 'the pins move to the new release');
       assert.equal(readState(project.root)?.kit, '9.9.10');
     } finally {
       project.dispose();
