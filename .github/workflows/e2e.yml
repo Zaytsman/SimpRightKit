@@ -1,0 +1,107 @@
+name: E2E
+
+# Runs the kit's actions for real, as a project's generated workflows do, on the sample project (examples/sample-project):
+# the install, its smoke tests and the step-title check, publishing the run and the portal's pages to this repository's
+# gh-pages branch, and squashing that branch's history; then checks what landed there. The actions and the packages are
+# this commit's own (./actions/*, and the packages the sample links from packages/). Nothing serves the branch: this
+# repository's Pages deploy the demo portal from Actions (demo.yml).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run at a time pushes gh-pages.
+concurrency:
+  group: e2e-gh-pages
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    # A pull request from a fork gets a read-only token, and the publish steps push.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # push to gh-pages
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Only the publish steps get a token.
+          persist-credentials: false
+
+      # The setup action at the repository's root installs the kit itself; the sample links its packages.
+      - name: Set up the kit
+        uses: ./actions/setup
+        with:
+          node-version: 24
+
+      - name: Build the packages
+        run: npm run build
+
+      - name: Set up the sample project
+        uses: ./actions/setup
+        with:
+          node-version: 24
+          working-directory: examples/sample-project
+
+      - name: Run its smoke tests
+        uses: ./actions/run-tests
+        with:
+          project: all
+          grep: '@smoke'
+          check-step-titles: true
+          working-directory: examples/sample-project
+
+      - name: Publish the run
+        uses: ./actions/publish-run
+        with:
+          run-id: smoke
+          token: ${{ github.token }}
+          working-directory: examples/sample-project
+
+      - name: Publish the portal's pages
+        uses: ./actions/publish-pages
+        with:
+          token: ${{ github.token }}
+          working-directory: examples/sample-project
+
+      # The publish steps left the push URL in the git config, so this fetch reads the branch they pushed.
+      - name: Check the published site
+        run: |
+          git fetch --quiet --depth=1 origin gh-pages
+          missing=0
+          for file in index.html portal.json site.json smoke-manifest.json smoke-history.json \
+            "smoke/run-${GITHUB_RUN_NUMBER}/index.html" "smoke/run-${GITHUB_RUN_NUMBER}/run-summary.json" latest/smoke/index.html \
+            test-cases/api/index.html test-cases/ui/index.html bugs/index.html; do
+            if ! git cat-file -e "FETCH_HEAD:${file}" 2>/dev/null; then
+              echo "::error::gh-pages has no ${file}"
+              missing=1
+            fi
+          done
+          test "$missing" = 0
+          git rev-parse 'FETCH_HEAD^{tree}' > "$RUNNER_TEMP/site-tree"
+          echo "gh-pages has the run and the pages (tree $(cut -c1-7 "$RUNNER_TEMP/site-tree"))."
+
+      - name: Squash gh-pages
+        uses: ./actions/squash-pages
+        with:
+          token: ${{ github.token }}
+
+      - name: Check the squash
+        run: |
+          git fetch --quiet --depth=2 origin gh-pages
+          if [ "$(git rev-list --count FETCH_HEAD)" != 1 ]; then
+            echo "::error::gh-pages has more than one commit after the squash"
+            exit 1
+          fi
+          if [ "$(git rev-parse 'FETCH_HEAD^{tree}')" != "$(cat "$RUNNER_TEMP/site-tree")" ]; then
+            echo "::error::the squash changed the site's files"
+            exit 1
+          fi
+          echo "gh-pages is one commit with the same files."

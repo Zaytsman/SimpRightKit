@@ -1,0 +1,24 @@
+name: Squash the GitHub Pages history
+description: >-
+  Replaces the gh-pages branch's history with one commit holding the current site (the same files), pushed with
+  --force-with-lease, so a publish that lands at the same moment is never overwritten (squash-pages.sh). Part of the
+  SimpRight Kit's CI (actions/README.md).
+
+inputs:
+  token:
+    description: 'A token that can force-push gh-pages (github.token with contents: write)'
+    required: true
+  working-directory:
+    description: "A folder of the repository's checkout to run in (default: the repository's root)"
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - name: Squash gh-pages
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: bash "$GITHUB_ACTION_PATH/squash-pages.sh"

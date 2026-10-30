@@ -26,10 +26,13 @@ export interface Project {
   dispose(): void;
 }
 
+/** What an install or a run of the sample leaves (the e2e workflow does both): never part of a copy. */
+const LEFT_BY_RUNS = new Set(['node_modules', 'test-results', 'playwright-report']);
+
 /** A copy of the sample project in a new temporary folder. */
 export function sampleProject(): Project {
   const root = mkdtempSync(path.join(os.tmpdir(), 'simpright-sample-'));
-  cpSync(SAMPLE, root, { recursive: true });
+  cpSync(SAMPLE, root, { recursive: true, filter: (source) => !LEFT_BY_RUNS.has(path.relative(SAMPLE, source).split(path.sep)[0] ?? '') });
   for (const { name, folder, files } of INSTALLED) {
     for (const file of files) {
       cpSync(path.join(KIT, 'packages', folder, file), path.join(root, 'node_modules', name, file), { recursive: true });

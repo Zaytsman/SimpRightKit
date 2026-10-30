@@ -1,0 +1,12 @@
+{
+  "name": "sample-shop-tests",
+  "private": true,
+  "description": "The SimpRight Kit's sample project. The kit's e2e workflow installs it and runs it through the kit's actions, with the kit's packages linked from the same commit.",
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@simpright/portal": "file:../../packages/portal",
+    "@simpright/scenarios": "file:../../packages/scenarios",
+    "simpright": "file:../../packages/simpright"
+  }
+}

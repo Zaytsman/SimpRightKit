@@ -1,0 +1,28 @@
+name: Publish the wiki
+description: >-
+  Copies a folder of Markdown pages to the repository's GitHub wiki: pages added, changed or removed there are added,
+  changed or removed in the wiki (publish-wiki.sh). Part of the SimpRight Kit's CI (actions/README.md).
+
+inputs:
+  source:
+    description: "The folder that holds the wiki pages, relative to the working directory: paths.wiki in simpright.yml"
+    required: false
+    default: docs/wiki
+  token:
+    description: 'A token that can push to the wiki (github.token with contents: write)'
+    required: true
+  working-directory:
+    description: "The project's folder in the repository (default: the repository's root)"
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - name: Sync to the wiki
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        SOURCE: ${{ inputs.source }}
+      run: bash "$GITHUB_ACTION_PATH/publish-wiki.sh" "$SOURCE"

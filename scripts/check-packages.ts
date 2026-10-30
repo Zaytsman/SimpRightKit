@@ -4,9 +4,12 @@
 
 import { execFileSync } from 'node:child_process';
 
-/** Besides dist/*.js, dist/*.d.ts, package.json, README.md and LICENSE: the files each package must ship. */
+/**
+ * Besides dist/*.js, dist/*.d.ts, package.json, README.md and LICENSE: the files each package must ship. The published
+ * simpright also has dist/release.json, which the release workflow writes after this check.
+ */
 const EXTRA: Record<string, string[]> = {
-  simpright: ['simpright.schema.json'],
+  simpright: ['simpright.schema.json', 'dist/kit-data.json'],
   '@simpright/scenarios': ['schemas/bug.schema.json', 'schemas/scenarios.schema.json'],
   '@simpright/portal': ['pages/bugs.html', 'pages/dashboard.html', 'pages/test-cases.html', 'sample/portal.json', 'sample/site.json'],
 };

@@ -23,6 +23,8 @@ export interface IdFormat {
 export interface Run {
   id: string;
   label: string;
+  /** The caller's file name in .github/workflows/ (default: <id>.yml). */
+  workflow?: string;
   note?: string;
   project: 'ui' | 'api' | 'all';
   schedule?: string;
@@ -62,7 +64,9 @@ export interface Config {
     bugSchema?: string;
     apiTests?: string;
     uiTests?: string;
+    wiki?: string;
   };
+  commands: Record<string, string>;
   ids: {
     layers: Record<string, IdFormat>;
     areas: string[];
@@ -72,7 +76,12 @@ export interface Config {
   roles: string[];
   api?: LayerFacts;
   ui?: LayerFacts;
-  parts?: { portal?: false | { testCases?: boolean; bugs?: boolean } } & Record<string, unknown>;
+  parts?: {
+    scenarios?: boolean;
+    portal?: false | { testCases?: boolean; bugs?: boolean };
+    coverage?: false | { package: string; registry?: string };
+    wiki?: boolean;
+  } & Record<string, unknown>;
   core?: { files: string[]; seams?: string[] };
   ci?: { node: number; secrets: string[]; branches?: { default?: string; work?: string } };
   runs?: Run[];

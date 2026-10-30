@@ -10,7 +10,7 @@
     "packages/portal"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
+    "build": "npm run build --workspaces && node scripts/kit-data.ts",
     "typecheck": "npm run build && tsc -p tsconfig.json",
     "test": "npm run build && node --test \"packages/*/test/**/*.test.ts\"",
     "check:packages": "node scripts/check-packages.ts",

@@ -97,6 +97,18 @@ jobs:
       - name: Build
         run: npm run build
 
+      # simpright apply pins the kit's actions to this commit, and a commit can't hold its own SHA, so the release run
+      # records it in the package it publishes (the tag's run has the tagged commit as GITHUB_SHA).
+      - name: Record the release's commit
+        run: |
+          node -e '
+            const fs = require("fs");
+            const { version } = require("./packages/simpright/package.json");
+            const release = { version, commit: process.env.GITHUB_SHA };
+            fs.writeFileSync("packages/simpright/dist/release.json", JSON.stringify(release, null, 2) + "\n");
+            console.log("simpright " + version + ": its actions are at " + release.commit);
+          '
+
       # In dependency order, so a package's sibling is on npm before it.
       - name: Publish
         run: |
