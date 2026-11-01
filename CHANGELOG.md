@@ -2,7 +2,7 @@
 
 The kit's packages share one version; each release lists what changed in each of them.
 
-## 0.2.1 (unreleased)
+## 0.2.1 (2026-11-01)
 
 - **The actions:** `publish-wiki` compares the pages by content (`rsync --checksum`, in its new `sync-pages.sh`). It could leave a changed page out of the wiki when the change kept the page's size and the checkout and the wiki's clone ran in the same second, as they often do: rsync's quick check took the page for unchanged. The e2e workflow checks that case.
 - **simpright, @simpright/scenarios, @simpright/portal:** no change; released at 0.2.1 with the kit.
