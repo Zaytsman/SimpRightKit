@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- One page for every scenario layer: simpright-portal build-test-cases copies it to test-cases/<layer>/
+       next to that layer's scenarios-data.js (window.SCENARIO_CATALOG). -->
+  <title>Test Cases</title>
+  <!-- The portal's icon (the README banner's logo), inline like on the dashboard. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='10' fill='%233fb950'/%3E%3Cpath d='M11 23l8 8l15-17' fill='none' stroke='%23fff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* The portal's palette (index.html), from the README banner: GitHub's dark greys and greens. */
+    :root {
+      --bg: #0d1117;
+      --bg-end: #0e1813;
+      --inset: #010409;
+      --surface: #161b22;
+      --surface-2: #21262d;
+      --line: #30363d;
+      --line-soft: #21262d;
+      --line-bright: #8b949e;
+      --text: #e6edf3;
+      --text-strong: #f0f6fc;
+      --muted: #9198a1;
+      --green: #3fb950;
+      --green-hover: #56d364;
+      --green-bg: rgba(63, 185, 80, 0.12);
+      --green-line: rgba(63, 185, 80, 0.4);
+      --red: #f85149;
+      --red-text: #ffa198;
+      --red-bg: rgba(248, 81, 73, 0.1);
+      --red-line: rgba(248, 81, 73, 0.4);
+      --amber: #d29922;
+      --amber-text: #e3b341;
+      --amber-bg: rgba(210, 153, 34, 0.12);
+      --amber-line: rgba(210, 153, 34, 0.4);
+      --blue: #58a6ff;
+      --blue-text: #79c0ff;
+      --blue-bg: rgba(88, 166, 255, 0.1);
+      --blue-line: rgba(88, 166, 255, 0.35);
+      --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      background-image: linear-gradient(180deg, var(--bg) 0%, var(--bg-end) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--green); text-decoration: none; }
+    a:hover { color: var(--green-hover); }
+    button { font-family: inherit; }
+
+    :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+    /* Layout */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 420px minmax(0, 1fr);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sidebar: header, filters, tree */
+    .sidebar-pane {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-width: 0;
+      background: rgba(13, 17, 23, 0.85);
+      border-right: 1px solid var(--line-soft);
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px 18px;
+      border-bottom: 1px solid var(--line-soft);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* The portal's logo, linking back to it. */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      align-self: flex-start;
+    }
+    .brand svg { flex: none; }
+    .brand-name {
+      display: block;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      color: var(--text-strong);
+    }
+    .brand-name span { color: var(--green); }
+    .brand-sub {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.1;
+      color: var(--muted);
+    }
+
+    .page-head { display: flex; flex-direction: column; gap: 4px; }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .back-link:hover { color: var(--text); }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .brand-title h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      color: var(--text-strong);
+      margin: 0;
+    }
+    .brand-tag {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 6px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text-strong);
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .kpi-card:hover { border-color: var(--line-bright); }
+    .kpi-card.active { border-color: var(--green-line); background: var(--green-bg); }
+    .kpi-card .num { display: block; font-size: 20px; font-weight: 700; line-height: 1.1; }
+    .kpi-card .lbl {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .num-auto { color: var(--green); }
+    .num-manual { color: var(--blue); }
+    .num-known { color: var(--amber); }
+
+    .filter-box {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--line-soft);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .search-input-wrap { position: relative; }
+    .search-input {
+      width: 100%;
+      min-height: 40px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 0 36px 0 36px;
+      outline: none;
+    }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-bg); }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .clear-search-btn {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .clear-search-btn:hover { color: var(--text); }
+
+    .filter-pills-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .filter-pills-container { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-pill {
+      min-height: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+    .filter-pill:hover { color: var(--text); border-color: var(--line-bright); }
+    .filter-pill.active { background: var(--green-bg); border-color: var(--green-line); color: var(--green); }
+    .filter-pill.active[data-status="manual"] { background: var(--blue-bg); border-color: var(--blue-line); color: var(--blue-text); }
+    .filter-pill.active[data-status="known"] { background: var(--amber-bg); border-color: var(--amber-line); color: var(--amber-text); }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* Tree */
+    .scenarios-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px 12px;
+    }
+    .scenarios-list::-webkit-scrollbar { width: 6px; }
+    .scenarios-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+
+    .tree-root-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 6px 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .tree-root-label .label-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-action {
+      min-height: 26px;
+      padding: 0 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+    .tree-action:hover { color: var(--text); border-color: var(--line-bright); }
+    .tree-group.collapsed > .tree-children { display: none; }
+    .tree-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      min-height: 36px;
+      padding: 0 8px;
+      border: none;
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+      text-align: left;
+      color: var(--text-strong);
+      transition: background 0.15s ease;
+    }
+    .tree-label:hover { background: rgba(240, 246, 252, 0.04); }
+    .tree-label.area { font-size: 14px; font-weight: 700; }
+    .tree-label.file { font-size: 13px; font-weight: 500; color: var(--text); padding-left: 28px; }
+    .tree-label .label-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-label.file .label-text.endpoint { font-family: var(--mono); font-size: 12px; }
+    .tree-count {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+    }
+    .tree-toggle {
+      display: inline-flex;
+      width: 16px;
+      height: 16px;
+      color: var(--muted);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .tree-group.collapsed > .tree-label .tree-toggle { transform: rotate(-90deg); }
+
+    .tree-leaf {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      width: 100%;
+      min-height: 40px;
+      padding: 9px 8px 9px 52px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: none;
+      cursor: pointer;
+      text-align: left;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .tree-leaf:hover { background: rgba(240, 246, 252, 0.04); }
+    .tree-leaf.active { background: var(--green-bg); border-color: var(--green-line); color: var(--text-strong); }
+    /* Level with the first line of a wrapped name. */
+    .tree-leaf .status-dot { align-self: flex-start; margin-top: 6px; }
+    .tree-leaf .status-dot.automated { color: var(--green); }
+    .tree-leaf .status-dot.manual { color: var(--blue); }
+    .tree-leaf .leaf-id { font-family: var(--mono); font-size: 12px; color: var(--muted); flex-shrink: 0; }
+    .tree-leaf.active .leaf-id { color: var(--green); }
+    .tree-leaf .leaf-name { flex: 1; min-width: 0; line-height: 1.4; }
+    .tree-leaf .leaf-known { color: var(--amber); font-size: 12px; flex-shrink: 0; }
+
+    .list-empty { padding: 40px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+
+    .list-footer {
+      padding: 10px 20px;
+      border-top: 1px solid var(--line-soft);
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    .list-footer code { font-family: var(--mono); }
+
+    /* Detail pane */
+    .detail-pane {
+      height: 100vh;
+      overflow-y: auto;
+      min-width: 0;
+    }
+    .detail-pane::-webkit-scrollbar { width: 8px; }
+    .detail-pane::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+    .detail-header {
+      padding: 28px 40px 0;
+      max-width: 1080px;
+    }
+    .detail-breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .detail-breadcrumbs .sep { color: var(--line-bright); }
+    .detail-breadcrumbs strong { color: var(--text-strong); font-weight: 600; }
+    .detail-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    .detail-title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      color: var(--text-strong);
+      margin: 0;
+    }
+    .header-actions { display: flex; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+
+    .btn-action {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      color: var(--text-strong);
+      font-size: 13px;
+      font-weight: 600;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .btn-action:hover { background: #292e36; border-color: var(--line-bright); }
+    .btn-action.copied { background: var(--green-bg); border-color: var(--green-line); color: var(--green); }
+    .btn-action.active { background: var(--green-bg); border-color: var(--green-line); color: var(--green); }
+
+    .meta-tags-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chip.id { font-family: var(--mono); font-weight: 500; color: var(--text-strong); background: var(--surface-2); border-radius: 6px; padding: 2px 8px; }
+    .chip.automated { color: var(--green); background: var(--green-bg); border-color: var(--green-line); }
+    .chip.manual { color: var(--blue-text); background: var(--blue-bg); border-color: var(--blue-line); }
+    .chip.known { color: var(--amber-text); background: var(--amber-bg); border-color: var(--amber-line); }
+    .chip.role { color: var(--muted); }
+    .chip.tag { font-family: var(--mono); font-weight: 500; color: var(--blue-text); background: rgba(88, 166, 255, 0.08); border-color: rgba(88, 166, 255, 0.25); border-radius: 6px; padding: 2px 8px; }
+
+    /* The banners sit side by side and wrap; a known issue or a re-check takes the whole row. */
+    #detail-banners {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin: 20px 40px 0;
+      max-width: 1000px;
+    }
+    #detail-banners:empty { display: none; }
+    .banner {
+      flex: 1 1 360px;
+      min-width: 0;
+      padding: 16px 18px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .banner.known { flex-basis: 100%; border-color: var(--amber-line); }
+    .banner.auto { border-color: var(--green-line); }
+    .banner.manual { border-color: var(--blue-line); }
+    .banner-left { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .banner-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text-strong); }
+    .banner.auto .banner-title { color: var(--green); }
+    .banner.manual .banner-title { color: var(--blue-text); }
+    .banner.known .banner-title { color: var(--amber-text); }
+    .banner-desc { font-size: 13px; color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; }
+    .banner-desc a:hover { text-decoration: underline; }
+    .banner-desc strong { color: var(--text); }
+    .banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .code {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      background: var(--bg);
+      padding: 1px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+    }
+    a .code { color: var(--green); }
+
+    .detail-tabs-bar {
+      margin: 20px 40px 0;
+      max-width: 1000px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      border-bottom: 1px solid var(--line-soft);
+      padding-bottom: 8px;
+    }
+    .detail-tab {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+    .detail-tab:hover { color: var(--text); background: rgba(240, 246, 252, 0.04); }
+    .detail-tab.active { color: var(--green); background: var(--green-bg); }
+    .detail-tabs-bar .btn-action { margin-left: auto; }
+
+    .detail-content-area { padding: 20px 40px 48px; max-width: 1080px; }
+
+    .steps-container { display: flex; flex-direction: column; gap: 8px; }
+    .step-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+    .step-card:hover { border-color: var(--line-bright); }
+    .step-number {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--green-bg);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+      color: var(--green);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-text { font-size: 15px; line-height: 1.55; flex: 1; min-width: 0; overflow-wrap: anywhere; padding-top: 2px; }
+    .step-kw-action { color: var(--blue-text); font-weight: 600; }
+    .step-kw-verify { color: var(--green); font-weight: 600; }
+    .step-token-quote {
+      color: var(--amber-text);
+      background: rgba(210, 153, 34, 0.1);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 0.87em;
+    }
+    .step-token-endpoint { color: var(--blue-text); font-family: var(--mono); font-size: 0.87em; }
+
+    .yaml-container {
+      background: var(--inset);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px 18px;
+      overflow-x: auto;
+    }
+    .yaml-pre { margin: 0; font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--text); white-space: pre; }
+    .yaml-key { color: var(--blue-text); }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty-state svg { width: 64px; height: 64px; stroke: var(--line-bright); margin-bottom: 20px; }
+    .empty-state h3 { font-size: 18px; color: var(--text-strong); margin: 0 0 8px; }
+    .empty-state p { font-size: 14px; max-width: 440px; line-height: 1.5; margin: 0; }
+
+    /* The list moves above the detail. */
+    @media (max-width: 1100px) {
+      .app-layout { display: flex; flex-direction: column; height: auto; overflow: visible; }
+      .sidebar-pane { height: auto; border-right: none; border-bottom: 1px solid var(--line-soft); }
+      .scenarios-list { max-height: 420px; }
+      .detail-pane { height: auto; overflow: visible; }
+      .empty-state { min-height: 260px; }
+    }
+
+    @media (max-width: 640px) {
+      .sidebar-header, .filter-box, .list-footer { padding-left: 16px; padding-right: 16px; }
+      .scenarios-list { padding-left: 8px; padding-right: 8px; }
+      .tree-leaf { padding-left: 36px; }
+      .detail-header { padding: 20px 16px 0; }
+      #detail-banners, .detail-tabs-bar { margin-left: 16px; margin-right: 16px; }
+      .banner { flex-basis: 100%; }
+      .detail-content-area { padding: 16px 16px 32px; }
+      .detail-title-row { flex-direction: column; gap: 12px; }
+      .detail-title { font-size: 22px; }
+      .kpi-card .lbl { font-size: 10px; }
+      .step-card { gap: 10px; padding: 10px 12px; }
+    }
+
+    /* Test Cases pages */
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .layer-switch {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+    .layer-switch a {
+      min-width: 56px;
+      padding: 6px 14px;
+      border-radius: 7px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .layer-switch a:hover { color: var(--text); background: rgba(240, 246, 252, 0.04); }
+    .layer-switch a.current { color: var(--bg); background: var(--green); }
+    .run-link {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .run-link:hover { text-decoration: underline; }
+
+    .preconditions {
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+    .preconditions-title { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .preconditions ul { margin: 0; padding-left: 20px; }
+    .preconditions li { font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
+
+    .step-check {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      margin: 5px 0 0;
+      border: 1.5px solid var(--muted);
+      border-radius: 4px;
+      background: var(--bg);
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .step-check:hover { border-color: var(--green); }
+    .step-check:checked { background: var(--green); border-color: var(--green); }
+    .step-check:checked::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 1px;
+      width: 5px;
+      height: 10px;
+      border: solid var(--bg);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+    .step-card.done .step-text { text-decoration: line-through; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar-pane">
+      <div class="sidebar-header">
+        <!-- The portal's logo; it and the back link lead to the portal. -->
+        <a href="../../index.html" class="brand">
+          <svg width="36" height="36" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="#3fb950"/><path d="M11 23l8 8l15-17" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><span class="brand-name" id="brand-name"></span><span class="brand-sub" id="brand-tagline"></span></span>
+        </a>
+        <div class="page-head">
+          <a href="../../index.html" class="back-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Automation Portal
+          </a>
+          <div class="brand-title">
+            <h1 id="page-title">Test Cases</h1>
+            <span class="brand-tag">Scenario catalog</span>
+          </div>
+        </div>
+        <div class="header-row">
+          <nav class="layer-switch" aria-label="Test case pages">
+            <a href="../ui/" data-layer="ui">UI</a>
+            <a href="../api/" data-layer="api">API</a>
+          </nav>
+          <a class="run-link" id="run-link" target="_blank" rel="noreferrer" title="Open the custom test run workflow in GitHub Actions" hidden>Run on GitHub ↗</a>
+        </div>
+        <div class="kpi-row">
+          <button type="button" class="kpi-card" data-status="all" title="Show all scenarios">
+            <span class="num" id="kpi-total">-</span><span class="lbl">Total</span>
+          </button>
+          <button type="button" class="kpi-card" data-status="automated" title="Show automated scenarios">
+            <span class="num num-auto" id="kpi-auto">-</span><span class="lbl" id="kpi-auto-lbl">Automated</span>
+          </button>
+          <button type="button" class="kpi-card" data-status="manual" title="Show manual scenarios">
+            <span class="num num-manual" id="kpi-manual">-</span><span class="lbl">Manual</span>
+          </button>
+          <button type="button" class="kpi-card" data-status="known" title="Show scenarios with a known issue">
+            <span class="num num-known" id="kpi-known">-</span><span class="lbl">Known issues</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="filter-box">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" id="scenario-search" class="search-input" placeholder="Search ID, name, steps, role..." autocomplete="off" aria-label="Search scenarios">
+          <button type="button" id="clear-search" class="clear-search-btn" title="Clear search" hidden>✕</button>
+        </div>
+        <div class="filter-pills-row">
+          <div class="filter-pills-container" role="group" aria-label="Filter by status">
+            <button type="button" class="filter-pill active" data-status="all">All</button>
+            <button type="button" class="filter-pill" data-status="automated"><span class="status-dot" style="color: var(--green)"></span>Automated</button>
+            <button type="button" class="filter-pill" data-status="manual"><span class="status-dot" style="color: var(--blue)"></span>Manual</button>
+            <button type="button" class="filter-pill" data-status="known"><span class="status-dot" style="color: var(--amber)"></span>Known issue</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="scenarios-list" id="scenarios-list"></div>
+
+      <div class="list-footer">
+        <span id="showing-count">Loading scenarios...</span>
+        <span id="generated-info"></span>
+      </div>
+    </aside>
+
+    <main class="detail-pane" id="detail-pane">
+      <div id="empty-state" class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L19 7.5V19a2 2 0 0 1-2 2z"/>
+        </svg>
+        <h3 id="empty-title">No scenario selected</h3>
+        <p id="empty-text">Pick a scenario in the tree to see its steps, automation status and YAML.</p>
+      </div>
+
+      <div id="scenario-detail" hidden>
+        <header class="detail-header">
+          <div class="detail-breadcrumbs" id="detail-breadcrumbs"></div>
+          <div class="detail-title-row">
+            <h2 class="detail-title" id="detail-title"></h2>
+            <div class="header-actions">
+              <button type="button" class="btn-action" id="btn-copy-link" data-label="Copy link">Copy link</button>
+              <button type="button" class="btn-action" id="btn-copy-yaml" data-label="Copy YAML">Copy YAML</button>
+            </div>
+          </div>
+          <div class="meta-tags-row" id="detail-chips"></div>
+        </header>
+
+        <div id="detail-banners"></div>
+
+        <div class="detail-tabs-bar">
+          <button type="button" class="detail-tab active" data-tab="steps">Steps (<span id="steps-count">0</span>)</button>
+          <button type="button" class="detail-tab" data-tab="yaml">YAML</button>
+          <button type="button" class="btn-action" id="btn-execute" title="Tick off the steps while running the scenario by hand">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Execute
+          </button>
+        </div>
+
+        <div class="detail-content-area">
+          <div id="tab-steps" class="steps-container"></div>
+          <div id="tab-yaml" class="yaml-container" hidden><pre class="yaml-pre" id="yaml-content"></pre></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="scenarios-data.js"></script>
+  <script>
+    (function () {
+      const catalog = window.SCENARIO_CATALOG;
+      const $ = (id) => document.getElementById(id);
+      const CHEVRON = '<span class="tree-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg></span>';
+
+      const state = {
+        selectedId: null,
+        tab: 'steps',
+        search: '',
+        status: 'all',
+        // Open tree groups ("area:<name>" or "file:<path>"). Everything starts collapsed; selecting a
+        // scenario (or a #scenario= link) opens its branch, and filtering opens every matching group.
+        open: new Set(),
+        executing: new Set(),
+        done: new Map(),
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      // A project file's page on GitHub; projectPath is the project's folder in the repository ('' at its root).
+      function blobUrl(file, line) {
+        const [filePath, anchor] = file.split('#');
+        return `${catalog.repoUrl}/blob/${catalog.branch}/${catalog.projectPath ?? ''}${filePath}${line ? `#L${line}` : anchor ? `#${anchor.toLowerCase()}` : ''}`;
+      }
+
+      // The portal's brand from the data file (simpright.yml portal): the title, its accent (the end of it) in green, the tagline.
+      function renderBrand(portal) {
+        if (!portal) return;
+        const accent = portal.titleAccent && portal.title.endsWith(portal.titleAccent) ? portal.titleAccent : '';
+        const name = $('brand-name');
+        name.textContent = portal.title.slice(0, portal.title.length - accent.length);
+        if (accent) {
+          const span = document.createElement('span');
+          span.textContent = accent;
+          name.appendChild(span);
+        }
+        $('brand-tagline').textContent = portal.tagline || '';
+      }
+
+      function init() {
+        if (!catalog) {
+          $('showing-count').textContent = 'No scenario data found.';
+          $('empty-title').textContent = 'No scenario data';
+          $('empty-text').textContent = 'scenarios-data.js is missing. Build it with npm run test-cases:build.';
+          return;
+        }
+        document.title = catalog.portal ? `${catalog.portal.title} - ${catalog.title}` : catalog.title;
+        renderBrand(catalog.portal);
+        $('page-title').textContent = catalog.title;
+        document.querySelectorAll('.layer-switch a').forEach((a) => {
+          const current = a.dataset.layer === catalog.layer;
+          a.classList.toggle('current', current);
+          if (current) a.setAttribute('aria-current', 'page');
+        });
+
+        const { stats } = catalog;
+        $('kpi-total').textContent = stats.total;
+        $('kpi-auto').textContent = stats.automated;
+        $('kpi-auto-lbl').textContent = `Automated ${stats.automatedPct}%`;
+        $('kpi-manual').textContent = stats.manual;
+        $('kpi-known').textContent = stats.knownIssues;
+
+        if (catalog.workflowUrl) {
+          $('run-link').href = catalog.workflowUrl;
+          $('run-link').hidden = false;
+        }
+        const updated = new Date(catalog.generatedAt);
+        const commit = catalog.commit ? catalog.commit.slice(0, 7) : '';
+        $('generated-info').innerHTML = `Updated ${escapeHtml(updated.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }))}` +
+          (commit ? ` · <a href="${escapeHtml(`${catalog.repoUrl}/commit/${catalog.commit}`)}" target="_blank" rel="noreferrer"><code>${escapeHtml(commit)}</code></a>` : '');
+
+        bindEvents();
+        readHash();
+        render();
+      }
+
+      function bindEvents() {
+        $('scenario-search').addEventListener('input', (e) => {
+          state.search = e.target.value.trim().toLowerCase();
+          $('clear-search').hidden = !state.search;
+          if (isFiltering()) expandAll();
+          render();
+        });
+        $('clear-search').addEventListener('click', () => {
+          $('scenario-search').value = '';
+          state.search = '';
+          $('clear-search').hidden = true;
+          $('scenario-search').focus();
+          render();
+        });
+        document.querySelectorAll('[data-status]').forEach((button) => {
+          button.addEventListener('click', () => setStatus(button.dataset.status));
+        });
+        document.querySelectorAll('.detail-tab').forEach((tab) => {
+          tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+        });
+        $('btn-copy-yaml').addEventListener('click', (e) => copy(e.currentTarget, selected()?.yaml ?? ''));
+        $('btn-copy-link').addEventListener('click', (e) => copy(e.currentTarget, location.href));
+        $('btn-execute').addEventListener('click', () => {
+          const id = state.selectedId;
+          if (!id) return;
+          if (state.executing.has(id)) {
+            state.executing.delete(id);
+            state.done.delete(id);
+          } else {
+            state.executing.add(id);
+          }
+          renderSteps(selected());
+        });
+        window.addEventListener('hashchange', () => {
+          readHash();
+          render();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            move(e.key === 'ArrowDown' ? 1 : -1);
+          }
+        });
+      }
+
+      function setStatus(status) {
+        state.status = status;
+        document.querySelectorAll('[data-status]').forEach((b) => b.classList.toggle('active', b.dataset.status === status && (b.classList.contains('filter-pill') || status !== 'all')));
+        if (isFiltering()) expandAll();
+        render();
+      }
+
+      function isFiltering() {
+        return Boolean(state.search) || state.status !== 'all';
+      }
+
+      function branchKeys(sc) {
+        return [`area:${sc.area}`, `file:${sc.file}`];
+      }
+
+      // Opens every group; the tree renders only the groups with shown scenarios.
+      function expandAll() {
+        for (const area of catalog.tree) {
+          state.open.add(`area:${area.area}`);
+          for (const file of area.files) state.open.add(`file:${file.file}`);
+        }
+      }
+
+      function collapseAll() {
+        state.open.clear();
+      }
+
+      function matches(sc) {
+        if (state.status === 'known' && !sc.knownIssue) return false;
+        if ((state.status === 'automated' || state.status === 'manual') && sc.status !== state.status) return false;
+        if (!state.search) return true;
+        const text = [sc.id, sc.name, sc.suite, sc.areaLabel, sc.fileLabel, sc.file, sc.role ?? '', sc.knownIssue ?? '', sc.bug ?? '', sc.automatedIn ?? '', ...sc.ref, ...sc.tags, ...(sc.preconditions ?? []), ...sc.steps]
+          .join(' ')
+          .toLowerCase();
+        return text.includes(state.search);
+      }
+
+      function visible() {
+        return catalog.scenarios.filter(matches);
+      }
+
+      function selected() {
+        return catalog.scenarios.find((s) => s.id === state.selectedId);
+      }
+
+      function render() {
+        const shown = visible();
+        const shownIds = new Set(shown.map((s) => s.id));
+        if (!shownIds.has(state.selectedId)) state.selectedId = shown[0]?.id ?? null;
+        renderTree(shownIds);
+        $('showing-count').textContent = `Showing ${shown.length} of ${catalog.scenarios.length} scenarios`;
+        const sc = selected();
+        if (sc) renderDetail(sc);
+        else showEmpty(shown.length === 0 && catalog.scenarios.length > 0);
+      }
+
+      function renderTree(shownIds) {
+        const list = $('scenarios-list');
+        list.innerHTML = '';
+        const byId = new Map(catalog.scenarios.map((s) => [s.id, s]));
+        const fragment = document.createDocumentFragment();
+
+        const root = document.createElement('div');
+        root.className = 'tree-root-label';
+        const title = document.createElement('span');
+        title.className = 'label-text';
+        title.textContent = catalog.title;
+        root.append(title, treeAction('Expand all', expandAll), treeAction('Collapse all', collapseAll));
+        fragment.appendChild(root);
+
+        let any = false;
+        for (const area of catalog.tree) {
+          const files = area.files
+            .map((file) => ({ file, ids: file.ids.filter((id) => shownIds.has(id)) }))
+            .filter((f) => f.ids.length > 0);
+          if (files.length === 0) continue;
+          any = true;
+
+          const areaKey = `area:${area.area}`;
+          const areaGroup = group(areaKey, 'area', escapeHtml(area.label), files.reduce((n, f) => n + f.ids.length, 0));
+          for (const { file, ids } of files) {
+            const fileKey = `file:${file.file}`;
+            const labelClass = catalog.layer === 'api' && file.label !== file.name ? 'label-text endpoint' : 'label-text';
+            const fileGroup = group(fileKey, 'file', escapeHtml(file.label), ids.length, labelClass, file.file);
+            for (const id of ids) fileGroup.children.appendChild(leaf(byId.get(id)));
+            areaGroup.children.appendChild(fileGroup.el);
+          }
+          fragment.appendChild(areaGroup.el);
+        }
+
+        if (!any) {
+          const empty = document.createElement('div');
+          empty.className = 'list-empty';
+          empty.textContent = catalog.scenarios.length ? 'No scenarios match the filters.' : 'No scenarios yet.';
+          fragment.appendChild(empty);
+        }
+        list.appendChild(fragment);
+      }
+
+      function treeAction(text, action) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'tree-action';
+        button.textContent = text;
+        button.addEventListener('click', () => {
+          action();
+          renderTree(new Set(visible().map((s) => s.id)));
+        });
+        return button;
+      }
+
+      function group(key, kind, labelHtml, count, labelClass = 'label-text', title = '') {
+        const open = state.open.has(key);
+        const el = document.createElement('div');
+        el.className = `tree-group${open ? '' : ' collapsed'}`;
+        const label = document.createElement('button');
+        label.type = 'button';
+        label.className = `tree-label ${kind}`;
+        label.setAttribute('aria-expanded', String(open));
+        if (title) label.title = title;
+        label.innerHTML = `${CHEVRON}<span class="${labelClass}">${labelHtml}</span><span class="tree-count">${count}</span>`;
+        label.addEventListener('click', () => {
+          const nowOpen = el.classList.toggle('collapsed') === false;
+          label.setAttribute('aria-expanded', String(nowOpen));
+          nowOpen ? state.open.add(key) : state.open.delete(key);
+        });
+        const children = document.createElement('div');
+        children.className = 'tree-children';
+        el.append(label, children);
+        return { el, children };
+      }
+
+      function leaf(sc) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = `tree-leaf${sc.id === state.selectedId ? ' active' : ''}`;
+        item.dataset.id = sc.id;
+        item.title = `${sc.id}: ${sc.name}`;
+        item.innerHTML =
+          `<span class="status-dot ${sc.status}" title="${sc.status}"></span>` +
+          `<span class="leaf-id">${escapeHtml(sc.id)}</span>` +
+          `<span class="leaf-name">${escapeHtml(sc.name)}</span>` +
+          (sc.knownIssue ? '<span class="leaf-known" title="Known issue">⚠</span>' : '');
+        item.addEventListener('click', () => select(sc.id));
+        return item;
+      }
+
+      function select(id) {
+        if (state.selectedId === id && location.hash === `#scenario=${encodeURIComponent(id)}`) return;
+        state.selectedId = id;
+        const sc = selected();
+        // Arrow keys can move into a collapsed group: open the branch so the selection stays in view.
+        const closed = sc ? branchKeys(sc).filter((key) => !state.open.has(key)) : [];
+        closed.forEach((key) => state.open.add(key));
+        history.replaceState(null, '', `#scenario=${encodeURIComponent(id)}`);
+        document.querySelectorAll('.tree-leaf').forEach((item) => item.classList.toggle('active', item.dataset.id === id));
+        if (sc) renderDetail(sc);
+        if (closed.length || !document.querySelector('.tree-leaf.active')) render();
+        document.querySelector('.tree-leaf.active')?.scrollIntoView({ block: 'nearest' });
+      }
+
+      function move(direction) {
+        const shown = visible();
+        if (shown.length === 0) return;
+        // Tree order: areas, then files, then scenarios, the same order as catalog.scenarios.
+        const index = shown.findIndex((s) => s.id === state.selectedId);
+        const next = shown[Math.min(Math.max(index + direction, 0), shown.length - 1)];
+        select(next.id);
+      }
+
+      function readHash() {
+        const params = new URLSearchParams(location.hash.slice(1));
+        const id = params.get('scenario');
+        if (id && catalog.scenarios.some((s) => s.id === id)) {
+          state.selectedId = id;
+          branchKeys(selected()).forEach((key) => state.open.add(key));
+        }
+      }
+
+      function showEmpty(filteredOut) {
+        $('empty-state').hidden = false;
+        $('scenario-detail').hidden = true;
+        $('empty-title').textContent = filteredOut ? 'Nothing matches' : 'No scenario selected';
+        $('empty-text').textContent = filteredOut
+          ? 'No scenario matches the search and filters. Clear them to see the whole catalog.'
+          : 'Pick a scenario in the tree to see its steps, automation status and YAML.';
+      }
+
+      function renderDetail(sc) {
+        $('empty-state').hidden = true;
+        $('scenario-detail').hidden = false;
+
+        $('detail-breadcrumbs').innerHTML =
+          `<span>${escapeHtml(catalog.title)}</span><span class="sep">/</span>` +
+          `<span>${escapeHtml(sc.areaLabel)}</span><span class="sep">/</span>` +
+          `<strong>${escapeHtml(sc.fileLabel)}</strong>`;
+        $('detail-title').textContent = sc.name;
+
+        let chips = `<span class="chip id">${escapeHtml(sc.id)}</span>`;
+        chips += sc.status === 'automated'
+          ? '<span class="chip automated"><span class="status-dot"></span>Automated</span>'
+          : '<span class="chip manual"><span class="status-dot"></span>Manual</span>';
+        if (sc.knownIssue) chips += `<span class="chip known">⚠ Known issue${sc.bug ? ` ${escapeHtml(sc.bug)}` : ''}</span>`;
+        chips += `<span class="chip role" title="Who runs the scenario">Role: ${escapeHtml(sc.role ?? 'default')}</span>`;
+        chips += sc.tags.map((t) => `<span class="chip tag">${escapeHtml(t)}</span>`).join('');
+        $('detail-chips').innerHTML = chips;
+
+        renderBanners(sc);
+        $('steps-count').textContent = sc.steps.length;
+        renderSteps(sc);
+        $('yaml-content').innerHTML = escapeHtml(sc.yaml).replace(/^(\s*-?\s*)([A-Za-z]+):/gm, '$1<span class="yaml-key">$2</span>:');
+        switchTab(state.tab);
+      }
+
+      function renderBanners(sc) {
+        const banners = $('detail-banners');
+        banners.innerHTML = '';
+        const command = `npx playwright test -g "${sc.id}:"`;
+
+        if (sc.status === 'automated') {
+          const specLink = `<a href="${escapeHtml(blobUrl(sc.automatedIn, sc.specLine))}" target="_blank" rel="noreferrer"><span class="code">${escapeHtml(sc.automatedIn)}${sc.specLine ? `:${sc.specLine}` : ''}</span></a>`;
+          // GitHub can't pre-fill a manual workflow's inputs from a link, so Run on GitHub copies the title filter.
+          const filter = `${sc.id}:`;
+          const runHint = catalog.workflowUrl
+            ? `<br>Run on GitHub copies <span class="code">${escapeHtml(filter)}</span>: choose the area <strong>${escapeHtml(sc.area)}</strong> and paste it as the title filter (grep).`
+            : '';
+          const actions = [['Copy command', () => command]];
+          if (catalog.workflowUrl) actions.push(['Run on GitHub ↗', () => filter, catalog.workflowUrl]);
+          banners.appendChild(banner('auto', 'Automated',
+            `Spec: ${specLink}<br>Run it locally: <span class="code">${escapeHtml(command)}</span>${runHint}`,
+            actions));
+        } else {
+          const skill = catalog.layer === 'api' ? '/implement-api-scenarios' : '/implement-ui-scenarios';
+          banners.appendChild(banner('manual', 'Manual',
+            `Not automated yet. Run it by hand with <strong>Execute</strong> below, or automate it with <span class="code">${escapeHtml(`${skill} ${sc.id}`)}</span>.`,
+            []));
+        }
+
+        if (sc.knownIssue) {
+          const bugLink = sc.bug
+            ? `Bug: <a href="../../bugs/#bug=${encodeURIComponent(sc.bug)}" target="_blank" rel="noreferrer"><span class="code">${escapeHtml(sc.bug)}</span></a><br>`
+            : '';
+          banners.appendChild(banner('known', 'Known issue',
+            `${bugLink}${escapeHtml(sc.knownIssue)}<br>The test is expected to fail until the app is fixed (<span class="code">test.fail</span>).`,
+            []));
+        }
+
+        const fileLink = `<a href="${escapeHtml(blobUrl(sc.file))}" target="_blank" rel="noreferrer"><span class="code">${escapeHtml(sc.file)}</span></a>`;
+        const refs = sc.ref.map((ref) =>
+          ref.startsWith('docs/')
+            ? `<a href="${escapeHtml(blobUrl(ref))}" target="_blank" rel="noreferrer"><span class="code">${escapeHtml(ref)}</span></a>`
+            : `<span class="code">${escapeHtml(ref)}</span>`);
+        banners.appendChild(banner('refs', 'Source',
+          `Scenario file: ${fileLink}` + (refs.length ? `<br>Comes from: ${refs.join(' ')}` : ''),
+          []));
+      }
+
+      function banner(kind, title, descHtml, actions) {
+        const el = document.createElement('div');
+        el.className = `banner ${kind}`;
+        el.innerHTML = `<div class="banner-left"><div class="banner-title">${escapeHtml(title)}</div><div class="banner-desc">${descHtml}</div></div>`;
+        if (actions.length) {
+          const box = document.createElement('div');
+          box.className = 'banner-actions';
+          // Each action copies text() to the clipboard and, when it has a URL, opens it in a new tab.
+          for (const [label, text, url] of actions) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn-action';
+            button.dataset.label = label;
+            button.textContent = label;
+            button.addEventListener('click', () => {
+              copy(button, text());
+              if (url) window.open(url, '_blank', 'noopener');
+            });
+            box.appendChild(button);
+          }
+          el.appendChild(box);
+        }
+        return el;
+      }
+
+      function formatStep(raw) {
+        let text = escapeHtml(raw);
+        text = text.replace(/&quot;(.*?)&quot;/g, '<span class="step-token-quote">&quot;$1&quot;</span>');
+        text = text.replace(/\b(GET|POST|PUT|PATCH|DELETE|QUERY) (\/[^\s,;:)]*[^\s,.;:)])/g, '<span class="step-token-endpoint">$1 $2</span>');
+        text = text.replace(/^(Verify)\b/, '<span class="step-kw-verify">$1</span>');
+        text = text.replace(/^(Open|Click|Select|Enter|Set|Search|Send|Create|Add|Remove|Log in|Register|Type|Check|Clear|Pick|Go to)\b/, '<span class="step-kw-action">$1</span>');
+        return text;
+      }
+
+      function renderSteps(sc) {
+        const container = $('tab-steps');
+        container.innerHTML = '';
+        const executing = state.executing.has(sc.id);
+        $('btn-execute').classList.toggle('active', executing);
+        if (!state.done.has(sc.id)) state.done.set(sc.id, new Set());
+        const done = state.done.get(sc.id);
+
+        if (sc.preconditions?.length) {
+          const box = document.createElement('div');
+          box.className = 'preconditions';
+          box.innerHTML = '<div class="preconditions-title">Preconditions</div><ul>' +
+            sc.preconditions.map((item) => `<li>${formatStep(item)}</li>`).join('') + '</ul>';
+          container.appendChild(box);
+        }
+
+        sc.steps.forEach((step, index) => {
+          const card = document.createElement('div');
+          card.className = `step-card${/^Verify\b/.test(step) ? ' verify' : ''}${executing && done.has(index) ? ' done' : ''}`;
+          if (executing) {
+            const check = document.createElement('input');
+            check.type = 'checkbox';
+            check.className = 'step-check';
+            check.checked = done.has(index);
+            check.setAttribute('aria-label', `Step ${index + 1} done`);
+            check.addEventListener('change', () => {
+              check.checked ? done.add(index) : done.delete(index);
+              card.classList.toggle('done', check.checked);
+            });
+            card.appendChild(check);
+          }
+          card.insertAdjacentHTML('beforeend', `<div class="step-number">${index + 1}</div><div class="step-text">${formatStep(step)}</div>`);
+          container.appendChild(card);
+        });
+      }
+
+      function switchTab(tab) {
+        state.tab = tab;
+        document.querySelectorAll('.detail-tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
+        $('tab-steps').hidden = tab !== 'steps';
+        $('tab-yaml').hidden = tab !== 'yaml';
+        $('btn-execute').hidden = tab !== 'steps';
+      }
+
+      function copy(button, text) {
+        const done = () => {
+          button.classList.add('copied');
+          button.textContent = 'Copied';
+          setTimeout(() => {
+            button.classList.remove('copied');
+            button.textContent = button.dataset.label;
+          }, 1500);
+        };
+        if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => {});
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>

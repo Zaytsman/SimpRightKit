@@ -1,0 +1,37 @@
+{
+  "formatVersion": 1,
+  "title": "Sample Shop",
+  "titleAccent": "Shop",
+  "tagline": "SimpRight Kit demo",
+  "description": "A made-up shop's UI and API tests, to show what the SimpRight Kit portal looks like.",
+  "repository": "https://github.com/Zaytsman/SimpRightKit",
+  "wiki": false,
+  "healthThreshold": {
+    "ui": 1,
+    "api": 1
+  },
+  "runs": [
+    {
+      "id": "ui-regression",
+      "label": "UI regression",
+      "note": "Latest nightly run",
+      "trend": "ui"
+    },
+    {
+      "id": "api-regression",
+      "label": "API regression",
+      "note": "Latest nightly run",
+      "trend": "api"
+    },
+    {
+      "id": "smoke",
+      "label": "Smoke",
+      "note": "UI + API"
+    },
+    {
+      "id": "custom-ui",
+      "label": "Custom UI",
+      "note": "Latest custom run"
+    }
+  ]
+}
