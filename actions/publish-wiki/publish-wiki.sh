@@ -4,7 +4,7 @@
 # Usage: publish-wiki.sh <folder>
 #
 # The folder is the source: pages added, changed or removed there are added, changed or removed in the wiki
-# (rsync --delete), and edits made in the wiki's web editor are overwritten by the next publish. The wiki's git
+# (sync-pages.sh), and edits made in the wiki's web editor are overwritten by the next publish. The wiki's git
 # repository exists only after its first page was created in the web UI.
 #
 # Runs in GitHub Actions in the project's folder, with GH_TOKEN set to a token that can push.
@@ -17,7 +17,7 @@ if ! git clone --quiet "$wiki_url" "$RUNNER_TEMP/wiki"; then
   exit 1
 fi
 
-rsync -a --delete --exclude '.git' "${SOURCE%/}/" "$RUNNER_TEMP/wiki/"
+bash "$(dirname "${BASH_SOURCE[0]}")/sync-pages.sh" "$SOURCE" "$RUNNER_TEMP/wiki"
 
 cd "$RUNNER_TEMP/wiki"
 git add -A

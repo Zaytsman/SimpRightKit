@@ -2,6 +2,11 @@
 
 The kit's packages share one version; each release lists what changed in each of them.
 
+## 0.2.1 (unreleased)
+
+- **The actions:** `publish-wiki` compares the pages by content (`rsync --checksum`, in its new `sync-pages.sh`). It could leave a changed page out of the wiki when the change kept the page's size and the checkout and the wiki's clone ran in the same second, as they often do: rsync's quick check took the page for unchanged. The e2e workflow checks that case.
+- **simpright, @simpright/scenarios, @simpright/portal:** no change; released at 0.2.1 with the kit.
+
 ## 0.2.0 (2026-10-30)
 
 The CI part: SimpRight's GitHub Actions as the kit's own, and `simpright apply` to write the workflows that use them. After upgrading a project that ran `apply`, run it again.

@@ -4,7 +4,8 @@ name: E2E
 # the install, its smoke tests and the step-title check, publishing the run and the portal's pages to this repository's
 # gh-pages branch, and squashing that branch's history; then checks what landed there. The actions and the packages are
 # this commit's own (./actions/*, and the packages the sample links from packages/). Nothing serves the branch: this
-# repository's Pages deploy the demo portal from Actions (demo.yml).
+# repository's Pages deploy the demo portal from Actions (demo.yml). publish-wiki would overwrite this repository's
+# wiki, so only its page copy (sync-pages.sh) is checked, on two temporary folders.
 
 on:
   pull_request:
@@ -105,3 +106,24 @@ jobs:
             exit 1
           fi
           echo "gh-pages is one commit with the same files."
+
+      # Changed.md keeps its size and gets the wiki copy's modification time: the case rsync's quick check took for an
+      # unchanged page when the checkout and the wiki's clone ran in the same second.
+      - name: Check the wiki pages' copy
+        run: |
+          src="$RUNNER_TEMP/pages" wiki="$RUNNER_TEMP/wiki-checkout"
+          mkdir -p "$src" "$wiki/.git"
+          printf 'The Test Run\n' > "$wiki/Changed.md"
+          printf 'the test run\n' > "$src/Changed.md"
+          touch -d '2026-01-01 00:00:00' "$src/Changed.md" "$wiki/Changed.md"
+          printf 'new\n' > "$src/Added.md"
+          printf 'old\n' > "$wiki/Removed.md"
+          printf 'ref: refs/heads/master\n' > "$wiki/.git/HEAD"
+          bash actions/publish-wiki/sync-pages.sh "$src" "$wiki"
+          failed=0
+          [ "$(cat "$wiki/Changed.md")" = 'the test run' ] || { echo "::error::sync-pages kept a changed page of the same size and time"; failed=1; }
+          [ -f "$wiki/Added.md" ] || { echo "::error::sync-pages didn't add a new page"; failed=1; }
+          [ ! -e "$wiki/Removed.md" ] || { echo "::error::sync-pages didn't remove a deleted page"; failed=1; }
+          [ -f "$wiki/.git/HEAD" ] || { echo "::error::sync-pages removed the wiki's .git"; failed=1; }
+          test "$failed" = 0
+          echo "sync-pages copies a changed page of the same size and time, adds and removes pages, and keeps .git."
