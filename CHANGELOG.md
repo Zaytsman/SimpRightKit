@@ -2,7 +2,7 @@
 
 The kit's packages share one version; each release lists what changed in each of them.
 
-## 0.3.0 (unreleased)
+## 0.3.0 (2026-11-08)
 
 The agents part: SimpRight's QA agents and skills as a Claude Code plugin, in the kit's own marketplace, and `simpright apply` to give a project the plugin. The agents' facts in `simpright.yml` move under `agents:`, which breaks the old layout. After upgrading a project:
 
