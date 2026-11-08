@@ -21,8 +21,8 @@
 // - a scenario's knownIssue comes with a bug (and the other way round) that has a bug file and is open;
 // - automatedIn is <tests>/<layer>/<area>/<name>.spec.ts (named after the scenario file), exists, and has
 //   a `// Scenarios:` comment for this file, a test.describe titled '<tags> - <suite>', a test titled
-//   '<ID>: <name>' with the scenario name verbatim, and, for a known issue, the layer's knownIssue annotation
-//   with the scenario's bug and text;
+//   '<ID>: <name>' with the scenario name verbatim, and, for a known issue, the layer's known-issue annotation
+//   (agents.<layer>.knownIssue, else the kit's default line) with the scenario's bug and text;
 // - every test in <tests> starts its title with an ID, and that ID has a scenario whose automatedIn is this spec;
 //   every 'Known issue' annotation in a spec belongs to a scenario automated there.
 
@@ -55,6 +55,8 @@ const TEST_WITH_DETAILS = /\btest(?:\.(?:only|skip|fixme|fail|slow))?\(\s*(['"`]
 const TAG_OPTION = /\btag\s*:\s*(\[[^\]]*\]|'[^']*'|"[^"]*")/;
 const TITLE_ID = /^([A-Z]+-\d+):/;
 const KEBAB_CASE = '^[a-z0-9]+(-[a-z0-9]+)*$';
+/** The known-issue line of a layer without agents facts (simpright.yml agents.<layer>.knownIssue). */
+const DEFAULT_KNOWN_ISSUE = "test.fail(true, 'Known issue {bug}: {text}');";
 
 /** The titles of the calls `pattern` matches in `source`, with escapes resolved. */
 function titlesOf(source: string, pattern: RegExp): string[] {
@@ -236,10 +238,11 @@ export function validateScenarios(root: string, profile: Config): ValidationResu
   /** Bug ID → the scenarios that name it. */
   const bugScenarios = new Map<string, string[]>();
 
-  /** The annotation text inside a layer's knownIssue snippet ('Known issue {bug}: {text}'), if it has one. */
-  const knownIssueTemplate = (layer: string): string | undefined => {
-    const snippet = ({ api: profile.api, ui: profile.ui } as Record<string, { knownIssue: string } | undefined>)[layer]?.knownIssue;
-    return snippet ? /(['"`])((?:(?!\1).)*\{text\}(?:(?!\1).)*)\1/.exec(snippet)?.[2] : undefined;
+  /** The annotation inside a layer's known-issue line ('Known issue {bug}: {text}'), if it has one, and where the line comes from. */
+  const knownIssueTemplate = (layer: string): { annotation: string; from: string } | undefined => {
+    const facts = layer === 'api' || layer === 'ui' ? profile.agents?.[layer] : undefined;
+    const annotation = /(['"`])((?:(?!\1).)*\{text\}(?:(?!\1).)*)\1/.exec(facts?.knownIssue ?? DEFAULT_KNOWN_ISSUE)?.[2];
+    return annotation === undefined ? undefined : { annotation, from: facts ? `${PROFILE_FILE} agents.${layer}.knownIssue` : "the kit's default known-issue line" };
   };
   /** Spec → the known-issue annotations its scenarios ask for. */
   const expectedAnnotations = new Map<string, Set<string>>();
@@ -347,11 +350,11 @@ export function validateScenarios(root: string, profile: Config): ValidationResu
         }
         const template = knownIssueTemplate(layer);
         if (scenario.knownIssue && scenario.bug && template) {
-          const annotation = template.replaceAll('{bug}', scenario.bug).replaceAll('{text}', scenario.knownIssue);
+          const annotation = template.annotation.replaceAll('{bug}', scenario.bug).replaceAll('{text}', scenario.knownIssue);
           const expected = expectedAnnotations.get(scenario.automatedIn) ?? new Set<string>();
           expectedAnnotations.set(scenario.automatedIn, expected.add(annotation));
           if (!titlesOf(spec, KNOWN_ISSUE_CALL).includes(annotation)) {
-            fail(where, `${scenario.automatedIn} needs the known-issue line test.fail(true, '${annotation}') (${PROFILE_FILE} ${layer}.knownIssue)`);
+            fail(where, `${scenario.automatedIn} needs the known-issue line test.fail(true, '${annotation}') (${template.from})`);
           }
         }
         if (!checkedSpecs.has(scenario.automatedIn)) {

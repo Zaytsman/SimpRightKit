@@ -32,20 +32,20 @@ The conventions themselves are in the files under the profile's `project.convent
 - No fixed sleeps (`waitForTimeout`), no longer timeouts or `retries` added as a fix.
 - Every action waits for the app's own signal before the next step relies on its result (a marker, a toast, a URL, a response). Look for an action followed directly by a read.
 - Data shared between parallel tests: a test that changes a shared record (a seeded product, a shared test user's cart or favourites) can break another test reading it. Each spec file must pass alone and next to the others.
-- Record ids can change under the tests (the profile's `liveApi.transient` says when, such as a periodic data reset), so a hard-coded id breaks; find records by their names and seeded values.
+- Record ids can change under the tests (the profile's `agents.liveApi.transient` says when, such as a periodic data reset), so a hard-coded id breaks; find records by their names and seeded values.
 - Order inside a list the app doesn't promise to keep (search results, related products) isn't asserted unless the scenario says so.
 - Test-created records use `uniqueName` (so parallel runs don't collide) and are removed with `cleanup`.
 
 ## 4. Test data
 
-- A seeded value (a product name, a category, a price) that **more than one test** uses goes in the constants module (the profile's `api.exemplars.constants` or `ui.exemplars.constants`); a value one test uses stays a variable in that test (conventions "Layout"). Count the uses across all specs, not only the change.
+- A seeded value (a product name, a category, a price) that **more than one test** uses goes in the constants module (the profile's `agents.api.exemplars.constants` or `agents.ui.exemplars.constants`); a value one test uses stays a variable in that test (conventions "Layout"). Count the uses across all specs, not only the change.
 - No secret values in steps, code, messages or test titles. Users come from fixtures and roles.
 - No magic values without a source: an expected price or count that isn't in the scenario or the constants needs a comment saying where it comes from.
 
 ## 5. Live app safety
 
-- A test that creates, changes or deletes data (in any step, including setup) does so only when its writes were approved (the profile's `liveApi.writes`), and every record it creates is cleaned up, pass or fail.
-- Nothing from the profile's `liveApi.dangerous` happens (a wrong password for a shared account, changes to the admin).
+- A test that creates, changes or deletes data (in any step, including setup) does so only when its writes were approved (the profile's `agents.liveApi.writes`), and every record it creates is cleaned up, pass or fail.
+- Nothing from the profile's `agents.liveApi.dangerous` happens (a wrong password for a shared account, changes to the admin).
 
 ## 6. Shared code
 

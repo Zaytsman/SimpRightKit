@@ -1,8 +1,9 @@
 // `simpright doctor`: checks that a project's setup is consistent. The scenarios and bugs have their own check
 // (`simpright-scenarios validate`); this one covers the rest:
 // - simpright.yml matches simpright.schema.json (readConfig), and every path it names exists (except
-//   paths.coverageSummary, which a test run generates, and paths.appSource, a checkout CI doesn't have); a portal (parts.portal) needs runs and a portal section, and
-//   its Bugs page needs paths.bugs; portal.titleAccent is the end of portal.title;
+//   paths.coverageSummary, which a test run generates, and paths.appSource, a checkout CI doesn't have); a portal
+//   (parts.portal) needs runs and a portal section, and its Bugs page needs paths.bugs; portal.titleAccent is the end
+//   of portal.title; the agents (parts.agents) need their facts (agents);
 // - the kit's packages that are installed share one version (one kit release);
 // - every run (runs) has exactly one caller of .github/workflows/playwright-run.yml, with the run's id as its
 //   family, and the caller matches the run: project, grep, paths, schedule, a manual start (workflow_dispatch),
@@ -17,6 +18,8 @@
 //   the version from an input: as each workflow step that uses the action passes it), and at least one does;
 // - when simpright apply has run (.simpright/state.json), the files it generates are what it would write now, apart
 //   from the pins, and none it no longer writes is left;
+// - with parts.agents, .claude/settings.json declares the kit's marketplace from GitHub at the installed kit's tag and
+//   enables its simpright-qa plugin; without it, the plugin isn't enabled there;
 // - every core file and seam (core) exists, and a core code file imports only core files, the seams and packages
 //   (relative imports and the tsconfig.json path aliases are followed; comments are skipped; a document such as
 //   the conventions isn't scanned);
@@ -28,7 +31,8 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { CONFIG_FILE, ConfigError, type Config, type Run } from './config.ts';
 import { generateCi, type GeneratedFile } from './generate.ts';
-import { currentKit, KIT_ACTIONS, type Kit } from './kit.ts';
+import { currentKit, KIT_ACTIONS, KIT_REPO, type Kit } from './kit.ts';
+import { entriesOf, MARKETPLACE, marketplaceSource, PLUGIN, readSettings, SETTINGS_FILE } from './settings.ts';
 import { readState, STATE_FILE, withoutRefs } from './state.ts';
 import {
   ACTIONS_DIR,
@@ -103,6 +107,14 @@ export async function doctor(root: string, config: Config, options: DoctorOption
     }
   }
 
+  const beforeAgents = result.problems.length;
+  const agents = checkAgentsPart(root, config, installed?.version ?? kit.version, fail);
+  if (result.problems.length > beforeAgents) {
+    if (config.parts?.agents) result.hints.push(`Run simpright apply: it writes the ${PLUGIN} plugin's entries in ${SETTINGS_FILE} from parts.agents, with the marketplace at the installed kit's tag (a new kit version moves it).`);
+  } else if (agents) {
+    result.notes.push(agents);
+  }
+
   const { core } = config;
   if (core) {
     const beforeCore = result.problems.length;
@@ -144,11 +156,14 @@ function checkConfig(config: Config, exists: Exists, fail: Fail): void {
     ...Object.entries(paths)
       .filter(([key]) => key !== 'coverageSummary' && key !== 'appSource')
       .map(([key, file]): [string, string] => [`paths.${key}`, file]),
-    ...Object.entries(config.api?.exemplars ?? {}).map(([key, file]): [string, string] => [`api.exemplars.${key}`, file]),
-    ...Object.entries(config.ui?.exemplars ?? {}).map(([key, file]): [string, string] => [`ui.exemplars.${key}`, file]),
+    ...Object.entries(config.agents?.api?.exemplars ?? {}).map(([key, file]): [string, string] => [`agents.api.exemplars.${key}`, file]),
+    ...Object.entries(config.agents?.ui?.exemplars ?? {}).map(([key, file]): [string, string] => [`agents.ui.exemplars.${key}`, file]),
   ];
   for (const [key, file] of configPaths) {
     if (!exists(file)) fail(CONFIG_FILE, `${key}: ${file} doesn't exist`);
+  }
+  if (config.parts?.agents && !config.agents) {
+    fail(CONFIG_FILE, 'parts.agents needs agents: the facts the QA agents read (agents.liveApi, and agents.api or agents.ui for the layers the project tests)');
   }
   if (config.parts?.portal) {
     if (!config.runs) fail(CONFIG_FILE, 'parts.portal needs runs: the portal publishes the reports of the test runs');
@@ -253,6 +268,47 @@ function checkGenerated(root: string, config: Config, kit: Kit, exists: Exists, 
     if (!files.some((generated) => generated.file === file) && exists(file)) fail(file, 'simpright apply no longer writes it (it removes it)');
   }
   return files.length;
+}
+
+// --- The agents part ---
+
+/**
+ * Checks the plugin's entries in .claude/settings.json against parts.agents: with it on, the kit's marketplace from
+ * GitHub at the tag of kit `version` (the installed one) and the plugin enabled; with it off, the plugin not enabled.
+ * Returns the note for a passed check when parts.agents is on.
+ */
+function checkAgentsPart(root: string, config: Config, version: string, fail: Fail): string | undefined {
+  let settings: ReturnType<typeof readSettings>;
+  try {
+    settings = readSettings(root);
+  } catch (error) {
+    if (!(error instanceof ConfigError)) throw error;
+    for (const problem of error.problems) {
+      const at = problem.indexOf(': ');
+      fail(problem.slice(0, at), problem.slice(at + 2));
+    }
+    return undefined;
+  }
+  const { marketplace, plugin } = entriesOf(settings?.settings);
+  if (!config.parts?.agents) {
+    if (plugin === true) fail(SETTINGS_FILE, `enables ${PLUGIN}, but parts.agents is off in ${CONFIG_FILE}: turn it on, or remove the plugin's entries`);
+    return undefined;
+  }
+  if (!settings) {
+    fail(SETTINGS_FILE, `missing: parts.agents needs the ${MARKETPLACE} marketplace declared there and ${PLUGIN} enabled`);
+    return undefined;
+  }
+  const { ref } = marketplaceSource(version);
+  const source = (marketplace as { source?: Record<string, unknown> } | undefined)?.source;
+  if (marketplace === undefined) {
+    fail(SETTINGS_FILE, `doesn't declare the ${MARKETPLACE} marketplace (extraKnownMarketplaces), which parts.agents needs`);
+  } else if (source?.source !== 'github' || source.repo !== KIT_REPO) {
+    fail(SETTINGS_FILE, `declares the ${MARKETPLACE} marketplace from ${JSON.stringify(source ?? null)}, not from GitHub (${KIT_REPO})`);
+  } else if (source.ref !== ref) {
+    fail(SETTINGS_FILE, `the ${MARKETPLACE} marketplace is at ${source.ref === undefined ? 'its default branch' : String(source.ref)}, but the installed kit is ${version}: its tag is ${ref}`);
+  }
+  if (plugin !== true) fail(SETTINGS_FILE, `doesn't enable ${PLUGIN} (enabledPlugins), which parts.agents needs`);
+  return `Agents OK: ${SETTINGS_FILE} enables ${PLUGIN}, with the kit's marketplace at ${ref}.`;
 }
 
 // --- Runs and workflows ---

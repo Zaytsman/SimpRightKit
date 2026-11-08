@@ -28,6 +28,12 @@ async function check(change: (project: Project) => void, options: DoctorOptions 
   }
 }
 
+/** Turns the agents part on in the sample, which has it off. */
+const agentsOn = (p: Project) => p.edit('simpright.yml', 'parts:\n  scenarios: true\n', 'parts:\n  scenarios: true\n  agents: true\n');
+/** The sample's .claude/settings.json with `marketplace` as the kit's marketplace's source and the plugin `enabled`. */
+const settingsWith = (p: Project, source: Record<string, unknown>, enabled: boolean) =>
+  p.write('.claude/settings.json', `${JSON.stringify({ extraKnownMarketplaces: { 'simpright-kit': { source } }, enabledPlugins: { 'simpright-qa@simpright-kit': enabled } }, null, 2)}\n`);
+
 /** Each expected text is part of one problem; `unexpected` texts are part of none. */
 function assertProblems(result: DoctorResult, expected: string[], unexpected: string[] = []) {
   for (const text of expected) assert.ok(result.problems.some((problem) => problem.includes(text)), `expected a problem with: ${text}\ngot:\n${result.problems.join('\n')}`);
@@ -228,6 +234,54 @@ const cases: Case[] = [
     change: (p) => p.edit('simpright.yml', 'healthThreshold: { ui: 1, api: 1 }', 'healthThreshold: { ui: 1 }'),
     expect: ['simpright.yml: portal.healthThreshold has ui, but the runs feed the trends of ui, api'],
   },
+  // The agents part
+  {
+    name: "an exemplar that doesn't exist",
+    change: (p) => p.edit('simpright.yml', 'spec: tests/api/products/get-products.spec.ts', 'spec: tests/api/products/list-products.spec.ts'),
+    expect: ["simpright.yml: agents.api.exemplars.spec: tests/api/products/list-products.spec.ts doesn't exist"],
+  },
+  {
+    name: 'the agents part without its facts',
+    change: (p) => {
+      p.write('simpright.yml', p.read('simpright.yml').replace(/^# The QA agents' facts\.[\s\S]*?(?=^parts:)/m, ''));
+      agentsOn(p);
+    },
+    expect: ['simpright.yml: parts.agents needs agents'],
+  },
+  {
+    name: "the agents part without the plugin's entries",
+    change: agentsOn,
+    expect: ['.claude/settings.json: missing: parts.agents needs the simpright-kit marketplace declared there and simpright-qa@simpright-kit enabled'],
+  },
+  {
+    name: 'the marketplace at another tag, and the plugin off',
+    change: (p) => {
+      agentsOn(p);
+      settingsWith(p, { source: 'github', repo: 'Zaytsman/SimpRightKit', ref: 'v0.0.1' }, false);
+    },
+    expect: [
+      `.claude/settings.json: the simpright-kit marketplace is at v0.0.1, but the installed kit is ${VERSION}: its tag is v${VERSION}`,
+      ".claude/settings.json: doesn't enable simpright-qa@simpright-kit (enabledPlugins), which parts.agents needs",
+    ],
+  },
+  {
+    name: 'the marketplace from a local folder',
+    change: (p) => {
+      agentsOn(p);
+      settingsWith(p, { source: 'directory', path: '../SimpRightKit' }, true);
+    },
+    expect: ['.claude/settings.json: declares the simpright-kit marketplace from {"source":"directory","path":"../SimpRightKit"}, not from GitHub (Zaytsman/SimpRightKit)'],
+  },
+  {
+    name: 'the plugin enabled without parts.agents',
+    change: (p) => settingsWith(p, { source: 'github', repo: 'Zaytsman/SimpRightKit', ref: `v${VERSION}` }, true),
+    expect: ['.claude/settings.json: enables simpright-qa@simpright-kit, but parts.agents is off in simpright.yml'],
+  },
+  {
+    name: "a settings file that isn't strict JSON",
+    change: (p) => p.write('.claude/settings.json', '{ "enabledPlugins": {}, }\n'),
+    expect: ['.claude/settings.json: invalid JSON'],
+  },
 ];
 
 describe('simpright doctor', () => {
@@ -282,6 +336,23 @@ describe('simpright doctor', () => {
       project.dispose();
     }
   });
+
+  it('says where the keys of the layout before kit 0.3.0 went', () => {
+    const project = sampleProject();
+    try {
+      project.edit('simpright.yml', 'roles: [default, guest]\n', 'roles: [default, guest]\n\nliveApi:\n  writes: ask\n\nui: {}\n');
+      assert.throws(
+        () => readConfig(project.root),
+        (error) => {
+          assert.ok(error instanceof ConfigError);
+          assert.deepEqual(error.problems, ['simpright.yml: ui moved to agents.ui in kit 0.3.0', 'simpright.yml: liveApi moved to agents.liveApi in kit 0.3.0']);
+          return true;
+        },
+      );
+    } finally {
+      project.dispose();
+    }
+  });
 });
 
 describe("simpright doctor: the files apply generates and the kit's actions", () => {
@@ -290,11 +361,12 @@ describe("simpright doctor: the files apply generates and the kit's actions", ()
   const SQUASH = '.github/workflows/squash-gh-pages.yml';
   const SQUASH_PIN = `squash-pages@${COMMIT} # v${VERSION}`;
 
-  /** Doctor on a sample project after its first apply (with `applyKit`), changed by `change`, with `doctorKit`. */
-  async function checkApplied(change: (project: Project) => void, { applyKit = RELEASE, doctorKit = RELEASE } = {}): Promise<DoctorResult> {
+  /** Doctor on a sample project changed by `before`, after its first apply (with `applyKit`), changed by `change`, with `doctorKit`. */
+  async function checkApplied(change: (project: Project) => void, { applyKit = RELEASE, doctorKit = RELEASE, before = (_project: Project) => {} } = {}): Promise<DoctorResult> {
     const project = sampleProject();
     try {
       project.remove('.github');
+      before(project);
       apply(project.root, readConfig(project.root), { kit: applyKit, kitRef: applyKit.commit ?? COMMIT });
       change(project);
       return await doctor(project.root, readConfig(project.root), { offline: true, kit: doctorKit });
@@ -344,6 +416,18 @@ describe("simpright doctor: the files apply generates and the kit's actions", ()
   it("finds the kit's actions pinned at a commit that isn't the release's", async () => {
     const result = await checkApplied(() => {}, { doctorKit: { ...RELEASE, commit: 'c'.repeat(40) } });
     assertProblems(result, [`the kit's actions are pinned at bbbbbbb, but kit ${VERSION} is commit ccccccc`]);
+  });
+
+  it('passes the agents part after apply', async () => {
+    const result = await checkApplied(() => {}, { before: agentsOn });
+    assert.deepEqual(result.problems, []);
+    assert.ok(result.notes.includes(`Agents OK: .claude/settings.json enables simpright-qa@simpright-kit, with the kit's marketplace at v${VERSION}.`), result.notes.join('\n'));
+  });
+
+  it("finds the kit's marketplace at another release than the installed packages, and says to run apply", async () => {
+    const result = await checkApplied(() => {}, { before: agentsOn, applyKit: { ...RELEASE, version: '0.0.9' } });
+    assertProblems(result, [`.claude/settings.json: the simpright-kit marketplace is at v0.0.9, but the installed kit is ${VERSION}: its tag is v${VERSION}`]);
+    assert.ok(result.hints.some((hint) => hint.includes("it writes the simpright-qa@simpright-kit plugin's entries")), result.hints.join('\n'));
   });
 });
 

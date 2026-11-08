@@ -48,7 +48,7 @@ Then ask which findings to apply, in one multi-select question (each finding wit
 
 1. Make the changes yourself, in the project's style. Don't touch scenario steps or names: a finding about the scenario goes back to the user.
 2. Run `commands.typecheck` and `commands.validateScenarios`.
-3. Run the specs the changes touch with `commands.runSpec`, and `commands.repeatSpec` when a wait or a locator changed. A spec that writes data is run only if the user approved its writes before (the profile's `liveApi.writes`); otherwise ask: "Run it", "Don't run it", with what it writes and its cleanup in the descriptions.
+3. Run the specs the changes touch with `commands.runSpec`, and `commands.repeatSpec` when a wait or a locator changed. A spec that writes data is run only if the user approved its writes before (the profile's `agents.liveApi.writes`); otherwise ask: "Run it", "Don't run it", with what it writes and its cleanup in the descriptions.
 4. Report: the findings applied, the ones left and why, and the test results.
 
 Don't commit anything unless the user asks.

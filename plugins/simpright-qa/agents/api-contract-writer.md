@@ -41,13 +41,13 @@ The skill's reference files are in `${CLAUDE_PLUGIN_ROOT}/skills/write-api-contr
    - **Auth codes:** list `401` (no or invalid token) and the role check's `403` under each protected endpoint: they're part of its contract and easy to test. Account-state codes that every authenticated route shares (a disabled or locked account) go once in `## Authentication`, except on the endpoints where they're the endpoint's own behaviour (such as login).
    - **`500`s:** list one only when a client can trigger it reliably with a specific input (an unknown id, a malformed token). Mark it as a suspected bug in its line (`` - `500 Internal Server Error`: unknown id; suspected bug, should be 404 _(source)_ ``), so tests can document it as a known issue. Leave 500s that depend on server failures out.
 8. **Framework defaults are facts too, with care.** Behaviour that comes from the framework rather than the repository (a default validation-error body, a default status) may be documented when the service's own tests assert it or the framework's behaviour is certain from how the code uses it. Tag it `_(source)_`, say "framework default" in the line, and list it among the things to verify live.
-9. **Respect the profile's live-API guardrails.** `liveApi.dangerous` lists calls that cause lasting harm (such as failed logins that lock an account): never make them, whatever the brief allows.
+9. **Respect the profile's live-API guardrails.** `agents.liveApi.dangerous` lists calls that cause lasting harm (such as failed logins that lock an account): never make them, whatever the brief allows.
 
 ## Process
 
 ### 1. Prepare
 
-- Read the profile. Note `paths.contracts`, `paths.contractFormat`, `commands.validateContracts`, `commands.diffContracts`, `commands.contractsFromOpenApi` and `liveApi`.
+- Read the profile. Note `paths.contracts`, `paths.contractFormat`, `commands.validateContracts`, `commands.diffContracts`, `commands.contractsFromOpenApi` and `agents.liveApi`.
 - Read the files in `project.conventions` (the contract rules and origin tags are described there too) and the format specification at `paths.contractFormat`.
 - Check that the contract commands can run: run `commands.validateContracts` once. The commands come from the optional coverage package (`parts.coverage.package` in the profile). If it isn't installed, you can still write the contracts from the source, but you can't convert a spec or validate your work: say so in the report.
 - Read every existing contract in the contract folder, for two things: the facts already recorded (to check, per rule 6), and the project's conventions (how the Base URL section points at the test config, naming, terminology), which you follow. The structure and level of detail come from the format specification, not from the existing files: a short draft contract is not a style to copy.

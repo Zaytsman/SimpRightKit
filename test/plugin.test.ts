@@ -18,8 +18,8 @@ const SKILL_FIELDS = new Set(['name', 'description', 'when_to_use', 'argument-hi
 const DESCRIPTION_LIMIT = 1536;
 /** SimpRight's app under test, its helpers and its tools: facts like these belong in a project's simpright.yml. */
 const APP_WORDS = [/Toolshop/i, /practicesoftwaretesting/i, /practice-software-testing/i, /sprint5/, /re-?seed/i, /Cloudflare/i, /putProductInCart/, /findProductByName/, /registerCustomerForTest/, /registerThrowawayCustomer/, /search_completed/, /parseAmount/, /TestConstants/, /CartPage/, /run's customer/, /@zaytsman/, /playwright-api-coverage/];
-/** The top-level keys of simpright.yml that the texts name as `key.subkey`. */
-const CONFIG_KEYS = ['template', 'project', 'paths', 'commands', 'ids', 'roles', 'api', 'ui', 'liveApi', 'parts', 'core', 'ci', 'runs', 'portal'];
+/** The top-level keys of simpright.yml that the texts name as `key.subkey`, and the ones kit 0.3.0 moved under agents, so a text that still names one fails. */
+const CONFIG_KEYS = ['template', 'project', 'paths', 'commands', 'ids', 'roles', 'agents', 'parts', 'core', 'ci', 'runs', 'portal', 'api', 'ui', 'liveApi'];
 
 interface Schema {
   properties?: Record<string, Schema>;

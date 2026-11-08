@@ -1,5 +1,6 @@
 // simpright apply on copies of the sample project: the files it writes (against the golden files in test/golden/), the
-// state it keeps, the conflicts that stop it, and the CLI. UPDATE_GOLDEN=1 rewrites the golden files.
+// agents part's entries in .claude/settings.json, the state it keeps, the conflicts that stop it, and the CLI.
+// UPDATE_GOLDEN=1 rewrites the golden files.
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -7,7 +8,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { KIT, sampleProject, type Project } from '../../../test/helpers.ts';
-import { apply, type ApplyOptions } from '../src/apply.ts';
+import { apply, type ApplyOptions, type ApplyResult } from '../src/apply.ts';
 import { ConfigError, readConfig, UsageError } from '../src/config.ts';
 import { unifiedDiff } from '../src/diff.ts';
 import { describeCron } from '../src/generate.ts';
@@ -38,9 +39,16 @@ function freshProject(change: (project: Project) => void = () => {}): Project {
 
 const run = (project: Project, options: ApplyOptions = {}) => apply(project.root, readConfig(project.root), { kit: TEST_KIT, kitRef: REF, ...options });
 
-/** The sample turned into a project like SimpRight: a private coverage package, a wiki, a develop branch, named workflows. */
+const SETTINGS = '.claude/settings.json';
+/** Turns the agents part on in the sample, which has it off. */
+const agentsOn = (project: Project) => project.edit('simpright.yml', 'parts:\n  scenarios: true\n', 'parts:\n  scenarios: true\n  agents: true\n');
+const agentsOff = (project: Project) => project.edit('simpright.yml', 'parts:\n  scenarios: true\n  agents: true\n', 'parts:\n  scenarios: true\n');
+/** The change apply plans in .claude/settings.json, if any. */
+const settingsChange = (result: ApplyResult) => result.changes.find((change) => change.file === SETTINGS);
+
+/** The sample turned into a project like SimpRight: a private coverage package, a wiki, the agents, a develop branch, named workflows. */
 function simprightLike(project: Project): void {
-  project.edit('simpright.yml', 'parts:\n  scenarios: true\n', "parts:\n  scenarios: true\n  coverage: { package: '@acme/coverage', registry: https://npm.pkg.github.com }\n  wiki: true\n");
+  project.edit('simpright.yml', 'parts:\n  scenarios: true\n', "parts:\n  scenarios: true\n  agents: true\n  coverage: { package: '@acme/coverage', registry: https://npm.pkg.github.com }\n  wiki: true\n");
   project.edit('simpright.yml', '  pages: src/app/pages\n', '  pages: src/app/pages\n  wiki: docs/wiki\n');
   project.edit('simpright.yml', 'branches: { default: main }', 'branches: { default: main, work: develop }');
   project.edit('simpright.yml', '  - id: ui-regression\n', '  - id: ui-regression\n    workflow: run-ui-tests.yml\n');
@@ -86,11 +94,13 @@ describe('simpright apply', () => {
     }
   });
 
-  it('writes a project with a private package, a wiki, a work branch and named workflows', () => {
+  it('writes a project with a private package, a wiki, the agents, a work branch and named workflows', () => {
     const project = freshProject(simprightLike);
     try {
-      assert.equal(run(project).written, true);
+      const result = run(project);
+      assert.equal(result.written, true);
       assertGolden(project, 'simpright-like');
+      assert.equal(settingsChange(result)?.action, 'create');
     } finally {
       project.dispose();
     }
@@ -253,6 +263,143 @@ describe('simpright apply', () => {
       }
     });
   }
+});
+
+describe("simpright apply: the agents part's entries in .claude/settings.json", () => {
+  /** The file as apply writes it for kit 9.9.9 when there was none. */
+  const WRITTEN = [
+    '{',
+    '  "extraKnownMarketplaces": {',
+    '    "simpright-kit": {',
+    '      "source": {',
+    '        "source": "github",',
+    '        "repo": "Zaytsman/SimpRightKit",',
+    '        "ref": "v9.9.9",',
+    '        "sparsePaths": [',
+    '          ".claude-plugin",',
+    '          "plugins"',
+    '        ]',
+    '      }',
+    '    }',
+    '  },',
+    '  "enabledPlugins": {',
+    '    "simpright-qa@simpright-kit": true',
+    '  }',
+    '}',
+    '',
+  ].join('\n');
+
+  it('writes the plugin and its marketplace with parts.agents, and changes nothing the second time', () => {
+    const project = freshProject(agentsOn);
+    try {
+      const first = run(project);
+      assert.equal(first.written, true);
+      const change = settingsChange(first);
+      assert.deepEqual({ action: change?.action, part: change?.part }, { action: 'create', part: "the simpright-qa plugin's entries" });
+      assert.equal(project.read(SETTINGS), WRITTEN);
+      assert.match(readState(project.root)?.settings[SETTINGS] ?? '', /^sha256-[0-9a-f]{64}$/);
+      const state = project.read(STATE_FILE);
+      assert.equal(settingsChange(run(project))?.action, 'unchanged');
+      assert.equal(project.read(SETTINGS), WRITTEN);
+      assert.equal(project.read(STATE_FILE), state);
+    } finally {
+      project.dispose();
+    }
+  });
+
+  it('keeps the rest of the file: its other keys, their order and its indentation', () => {
+    const project = freshProject(agentsOn);
+    try {
+      project.write(SETTINGS, '{\n    "permissions": {\n        "allow": ["Bash(npm test)"]\n    },\n    "enabledPlugins": {\n        "other@elsewhere": true\n    }\n}\n');
+      assert.equal(settingsChange(run(project))?.action, 'update');
+      const settings = JSON.parse(project.read(SETTINGS)) as Record<string, unknown>;
+      assert.deepEqual(Object.keys(settings), ['permissions', 'enabledPlugins', 'extraKnownMarketplaces']);
+      assert.deepEqual(settings.permissions, { allow: ['Bash(npm test)'] });
+      assert.deepEqual(settings.enabledPlugins, { 'other@elsewhere': true, 'simpright-qa@simpright-kit': true });
+      assert.match(project.read(SETTINGS), /^ {4}"permissions"/m, 'the file keeps its indentation');
+    } finally {
+      project.dispose();
+    }
+  });
+
+  it("moves the marketplace to another release's tag without calling it a conflict", () => {
+    const project = freshProject(agentsOn);
+    try {
+      run(project);
+      const moved = run(project, { kitRef: 'f'.repeat(40), kit: { ...TEST_KIT, version: '9.9.10' } });
+      assert.equal(moved.written, true);
+      assert.equal(settingsChange(moved)?.action, 'update');
+      assert.match(settingsChange(moved)?.diff ?? '', /^- {8}"ref": "v9\.9\.9",\n\+ {8}"ref": "v9\.9\.10",$/m);
+      assert.equal(project.read(SETTINGS), WRITTEN.replace('v9.9.9', 'v9.9.10'));
+    } finally {
+      project.dispose();
+    }
+  });
+
+  it("stops on entries someone changed or that it didn't write, and --force overwrites them", () => {
+    const project = freshProject(agentsOn);
+    try {
+      run(project);
+      project.edit(SETTINGS, '"ref": "v9.9.9"', '"ref": "main"');
+      const stopped = run(project);
+      assert.equal(stopped.written, false);
+      assert.deepEqual({ action: settingsChange(stopped)?.action, why: settingsChange(stopped)?.why }, { action: 'conflict', why: 'changed since simpright apply wrote them' });
+      assert.match(project.read(SETTINGS), /"ref": "main"/);
+      assert.equal(run(project, { force: true }).written, true);
+      assert.equal(project.read(SETTINGS), WRITTEN);
+
+      // Without a record, the same entries are someone's work (the workflows, unchanged, stay apply's).
+      project.remove(STATE_FILE);
+      project.edit(SETTINGS, '"ref": "v9.9.9"', '"ref": "dev"');
+      const theirs = run(project);
+      assert.equal(theirs.written, false);
+      assert.equal(settingsChange(theirs)?.why, "simpright apply didn't write them");
+    } finally {
+      project.dispose();
+    }
+  });
+
+  it('removes the entries it wrote when parts.agents goes, and the file when nothing else is left', () => {
+    const project = freshProject(agentsOn);
+    try {
+      run(project);
+      agentsOff(project);
+      const removed = run(project);
+      assert.equal(settingsChange(removed)?.action, 'delete');
+      assert.equal(existsSync(path.join(project.root, SETTINGS)), false);
+      assert.deepEqual(readState(project.root)?.settings, {});
+
+      agentsOn(project);
+      run(project);
+      project.write(SETTINGS, `${JSON.stringify({ permissions: { deny: ['Read(./.env)'] }, ...JSON.parse(project.read(SETTINGS)) }, null, 2)}\n`);
+      agentsOff(project);
+      assert.equal(settingsChange(run(project))?.action, 'update');
+      assert.deepEqual(JSON.parse(project.read(SETTINGS)), { permissions: { deny: ['Read(./.env)'] } });
+    } finally {
+      project.dispose();
+    }
+  });
+
+  it("leaves entries it didn't write when parts.agents is off", () => {
+    const project = freshProject();
+    try {
+      project.write(SETTINGS, WRITTEN);
+      assert.equal(settingsChange(run(project)), undefined);
+      assert.equal(project.read(SETTINGS), WRITTEN);
+    } finally {
+      project.dispose();
+    }
+  });
+
+  it("refuses a settings file that isn't strict JSON", () => {
+    const project = freshProject(agentsOn);
+    try {
+      project.write(SETTINGS, '{\n  // our settings\n}\n');
+      assert.throws(() => run(project), (error) => error instanceof ConfigError && error.problems.some((problem) => problem.startsWith(`${SETTINGS}: invalid JSON`)));
+    } finally {
+      project.dispose();
+    }
+  });
 });
 
 describe('describeCron', () => {

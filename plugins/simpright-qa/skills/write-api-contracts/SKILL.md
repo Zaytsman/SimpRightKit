@@ -28,7 +28,7 @@ Work out each other item from the arguments, the conversation and the project. L
 | **Areas** | The arguments ("products and users"), the test scenarios in the project | All areas |
 | **Base URL for live checks** | The project's environment config for API tests | None |
 | **Live checks allowed?** | Only the user can say | No |
-| **Writes allowed?** | Only the user can say; the profile's `liveApi.writes` sets the project's default (`ask` means ask) | No |
+| **Writes allowed?** | Only the user can say; the profile's `agents.liveApi.writes` sets the project's default (`ask` means ask) | No |
 | **Token variable** | Only the user can say (the name of an environment variable holding a token, never the token itself) | None |
 
 At least one input (source or spec) is required. In `update` mode the contract folder (`paths.contracts`) must already have contracts; if it's empty, say so and use `create`.

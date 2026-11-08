@@ -24,8 +24,8 @@ The two test engineers preload the skills that hold how the framework builds its
 - **`simpright.yml`**, the project's profile, which every agent reads first:
   - `project.conventions`: the files with the project's rules;
   - `paths`, `commands`, `ids` and `roles`;
-  - each layer's exemplars, known-issue line and rules (`api`, `ui`);
-  - the live-app guardrails (`liveApi`).
+  - each layer's exemplars, known-issue line and rules (`agents.api`, `agents.ui`);
+  - the live-app guardrails (`agents.liveApi`).
 - **The scenario and bug formats** and their validator, from [`@simpright/scenarios`](../../packages/scenarios) (`commands.validateScenarios`).
 - **For the UI agents, the page inspector** from the template's core (`commands.inspectUi`). It shows a live page's test ids, roles and labels, read-only.
 - **For the contract commands** (convert a spec, compare, validate), the optional API coverage package (`parts.coverage`). Without it, contracts are still written from the source.
@@ -33,7 +33,7 @@ The two test engineers preload the skills that hold how the framework builds its
 
 ## Install
 
-With `parts.agents: true` in `simpright.yml`, `npx simpright apply` writes two keys into `.claude/settings.json`: the kit's marketplace, pinned to your kit version, and the plugin, enabled. `npx simpright doctor` checks them. The same keys by hand:
+With `parts.agents: true` in `simpright.yml`, `npx simpright apply` writes two entries into `.claude/settings.json`, and keeps the rest of the file: the kit's marketplace, pinned to your kit version's tag, and the plugin, enabled. `npx simpright doctor` checks them, and after a kit upgrade `apply` moves the tag. The same entries by hand, for kit 0.3.0:
 
 ```json
 {
@@ -58,9 +58,9 @@ To try it on your own, without changing the project, install it at your user lev
 
 - **Checkpoints:** a skill settles the brief, starts its agent, shows you what the agent returns, and asks at each checkpoint (a plan, a proposal, a draft, a diagnosis), following `shared/how-to-ask.md`. An agent can't ask you anything, so nothing is written before your approval.
 - **No app facts in the agents:** everything project-specific comes from `simpright.yml` and the files it names.
-  - An app quirk the agents should know (a periodic data reset, a cache, a rate limit) goes in `liveApi.transient`.
-  - An action that does lasting harm (failed logins that lock a shared account) goes in `liveApi.dangerous`.
-  - Writes on the live app follow `liveApi.writes` (`never`, `ask` or `allowed`).
+  - An app quirk the agents should know (a periodic data reset, a cache, a rate limit) goes in `agents.liveApi.transient`.
+  - An action that does lasting harm (failed logins that lock a shared account) goes in `agents.liveApi.dangerous`.
+  - Writes on the live app follow `agents.liveApi.writes` (`never`, `ask` or `allowed`).
 - **The same start everywhere:** the agents start without CLAUDE.md, CLAUDE.local.md or your memory (`omitClaudeMd`), and read the files in `project.conventions` themselves. A rule the agents must follow belongs in one of those files.
 
 ## Develop

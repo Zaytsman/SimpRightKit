@@ -6,7 +6,7 @@ user-invocable: false
 
 # UI spec from a scenario file
 
-Copy the structure of the exemplar spec (`ui.exemplars.spec` in the profile) and follow the spec conventions in the project's conventions files; the scenario validator checks the parts marked "(checked)".
+Copy the structure of the exemplar spec (`agents.ui.exemplars.spec` in the profile) and follow the spec conventions in the project's conventions files; the scenario validator checks the parts marked "(checked)".
 
 ## File
 
@@ -20,11 +20,11 @@ Copy the structure of the exemplar spec (`ui.exemplars.spec` in the profile) and
 - One `test('<ID>: <name>')` per scenario, with the name verbatim (escape quotes the way the exemplar does). (checked)
 - **Roles:** absent → the default user, nothing to set. `admin` (or another login role) → `test.use({ role: '<role>' })`. `guest` (logged out) → `test.use({ authMode: 'none' })`. When every scenario in the file has the same role, set it once inside the describe; otherwise wrap that one test in an anonymous `test.describe(() => { test.use(...); test(...) })`.
 - A scenario with `tags` (`["@smoke"]`): the test gets Playwright's tag option and keeps its title: `test('<ID>: <name>', { tag: '@smoke' }, async (...) => ...)`. A smoke test only makes writes it cleans up itself.
-- A scenario with `knownIssue`: the profile's `ui.knownIssue` snippet with the scenario's `bug` ID and the text verbatim goes right before the test's first `test.step`, after any setup code in the body (`// Precondition:` code, carts put through the API), so a failed setup is a real failure, not "bug still present". With no setup (or setup in a precondition fixture) it's the first line.
+- A scenario with `knownIssue`: the profile's `agents.ui.knownIssue` snippet with the scenario's `bug` ID and the text verbatim goes right before the test's first `test.step`, after any setup code in the body (`// Precondition:` code, carts put through the API), so a failed setup is a real failure, not "bug still present". With no setup (or setup in a precondition fixture) it's the first line.
 - Tests in a file run in parallel and each file runs on its own: no state shared between tests, no order between them.
 - State shared between steps goes in `let` variables at the top of the test; values only this test uses are `const`s there too (from the constants module when shared).
-- **Preconditions** (the scenario's `preconditions`): each precondition is set up before the first step, never in a `test.step`: with a precondition fixture (`open<Page><State>Test`, like `ui.exemplars.preconditionFixture`; the fixtures index, `ui.exemplars.fixturesIndex`, exports them all) when the tests share it, imported as `test` (`import { openHomePageTest as test, expect } from '@fixtures'`) so the validator finds the titles; otherwise as setup code at the top of the test with a `// Precondition: <text>` comment. A precondition fixture that exists for the text ("The home page is open." → `openHomePageTest`, "The product page of "X" is open." → `openProductPageTest` with `test.use({ productName })`) is always used; when tests in the file have different preconditions, wrap the ones that share a fixture in an anonymous `test.describe(() => { const test = <fixture>; ... })`.
-- **Setup** (the preconditions and the data they need, through the helpers `ui.rules` names) is code before the first step, never a `test.step`; when it can't prepare the state it throws an error starting with `Setup:`.
+- **Preconditions** (the scenario's `preconditions`): each precondition is set up before the first step, never in a `test.step`: with a precondition fixture (`open<Page><State>Test`, like `agents.ui.exemplars.preconditionFixture`; the fixtures index, `agents.ui.exemplars.fixturesIndex`, exports them all) when the tests share it, imported as `test` (`import { openHomePageTest as test, expect } from '@fixtures'`) so the validator finds the titles; otherwise as setup code at the top of the test with a `// Precondition: <text>` comment. A precondition fixture that exists for the text ("The home page is open." → `openHomePageTest`, "The product page of "X" is open." → `openProductPageTest` with `test.use({ productName })`) is always used; when tests in the file have different preconditions, wrap the ones that share a fixture in an anonymous `test.describe(() => { const test = <fixture>; ... })`.
+- **Setup** (the preconditions and the data they need, through the helpers `agents.ui.rules` names) is code before the first step, never a `test.step`; when it can't prepare the state it throws an error starting with `Setup:`.
 
 ## Steps
 
@@ -49,7 +49,7 @@ One `test.step('<step text verbatim>', ...)` per scenario step, in order.
 
 ## Things that bite
 
-- **Changing data:** record ids can change (the profile's `liveApi.transient` says when, such as a periodic data reset): never use ids in specs; find records by visible names. A run that starts inside one of those windows may fail in setup; that's the app, not the test.
+- **Changing data:** record ids can change (the profile's `agents.liveApi.transient` says when, such as a periodic data reset): never use ids in specs; find records by visible names. A run that starts inside one of those windows may fail in setup; that's the app, not the test.
 - **Re-renders:** a list that re-renders after an action can be read half-updated; the action must wait for its signal (marker, response, change) before the spec reads.
 - **Hidden duplicates:** responsive layouts may render an element twice (one hidden); scope locators to the visible one or to a container.
 - **Time:** wait for a condition the page exposes, never a fixed sleep.

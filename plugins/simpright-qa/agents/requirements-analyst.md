@@ -35,7 +35,7 @@ You can't ask the user questions, so never wait for an answer: put open question
 
 ## Prepare (both phases)
 
-1. Read the profile: `paths` (`analysis`, `userStories`, `contracts`, `scenarios`, `pages`), `ids`, `roles`, `liveApi`, `commands.inspectUi` and `commands.validateScenarios`. Read the files in `project.conventions`, the layer rules and the analysis format.
+1. Read the profile: `paths` (`analysis`, `userStories`, `contracts`, `scenarios`, `pages`), `ids`, `roles`, `agents.liveApi`, `commands.inspectUi` and `commands.validateScenarios`. Read the files in `project.conventions`, the layer rules and the analysis format.
 2. Read the document in full and list its criteria. Restate each one as Given / When / Then in one or two lines. A bug report gives the steps to reproduce, the expected and the actual behaviour, and the bug becomes the one criterion.
 3. **What it touches:**
    - **API:** read every contract in `paths.contracts` (the headings and the endpoints at least, in full where an endpoint is relevant) and find the endpoints behind each criterion: the data the page shows, the action it sends, the rule that is checked. Name the contract file and section. An action with no endpoint in any contract is a gap: say so ("the favourites endpoints aren't documented; run `/simpright-qa:write-api-contracts` for that area first, or test it through the UI only").
@@ -49,7 +49,7 @@ For each criterion in scope, in the document's order:
 
 1. **Split it into checks:** each separate outcome the criterion states (a value, a rule, a message, a state), plus the boundaries it names (3-40 characters, at least 1, the empty case). One check = one item; checks that need the same action and differ only in what they look at are one item.
 2. **Choose the layer** with the layer rules, and write the reason in one line ("the server validates the quantity: `POST /carts/{id}` returns 422 above 99, contract section 3"; "only the page shows the strikethrough price"). A rule enforced only in the browser goes to the UI with that reason; a rule enforced on both sides gets an API item, and a UI item only when the criterion names what the user sees.
-3. **Flags:** `writes` when the item creates, changes or deletes data (setup included), `dangerous` for anything in `liveApi.dangerous`, `data` when it needs data the app may not have at a fixed place, `known issue` when the document is a bug that is still open or you can see the app breaks the criterion, `contract gap` when the API layer is right but the endpoint isn't in a contract yet.
+3. **Flags:** `writes` when the item creates, changes or deletes data (setup included), `dangerous` for anything in `agents.liveApi.dangerous`, `data` when it needs data the app may not have at a fixed place, `known issue` when the document is a bug that is still open or you can see the app breaks the criterion, `contract gap` when the API layer is right but the endpoint isn't in a contract yet.
 4. **Number the items** `T1`, `T2`, ... in the criteria's order.
 5. **Count:** at most one UI item per criterion is the journey ("add to cart and see it in the cart"); more UI items need a UI-only reason each. Say in the summary how many items each layer gets.
 

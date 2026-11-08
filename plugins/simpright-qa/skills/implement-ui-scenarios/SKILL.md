@@ -16,7 +16,7 @@ Before the first question, read `${CLAUDE_PLUGIN_ROOT}/shared/how-to-ask.md` and
 
 ## 1. Settle the brief
 
-- **Profile:** `simpright.yml` in the repository root. If there's none, or it has no `ui` section, stop: the agent needs one.
+- **Profile:** `simpright.yml` in the repository root. If there's none, or it has no `agents.ui` section, stop: the agent needs one.
 - **Scenarios:** from the arguments, resolved against the UI scenario folder (`<paths.scenarios>/ui/`):
   - IDs (`UI-008 UI-009`, or a range `UI-008..011`);
   - a scenario file: a path as given, or a file name (with or without `.yml`, any letter case) found in the area folders;
@@ -42,7 +42,7 @@ The agent inspects the pages with the read-only page inspector (a logged-in run 
 
 Show the user the plan as the agent returned it. Then ask, in one call:
 1. **Plan:** the approval question.
-2. **Writes**, when the plan lists "Writes needing approval" (the profile's `liveApi.writes` is `ask`).
+2. **Writes**, when the plan lists "Writes needing approval" (the profile's `agents.liveApi.writes` is `ask`).
 3. **Decisions needed:** one question each.
 
 ## 3. Implementation

@@ -3,17 +3,22 @@
 ## Layout
 
 ```text
-packages/simpright/       simpright: the CLI (apply, doctor), the CI part's workflow templates (src/generate.ts) and
-                          simpright.yml's schema and reader; test/golden/ holds the workflows apply writes for the tests
+packages/simpright/       simpright: the CLI (apply, doctor), the CI part's workflow templates (src/generate.ts), the
+                          agents part's entries in .claude/settings.json (src/settings.ts) and simpright.yml's schema
+                          and reader; test/golden/ holds the workflows apply writes for the tests
 packages/scenarios/       @simpright/scenarios: the scenario and bug schemas, validate, check-step-titles
 packages/portal/          @simpright/portal: the pages (pages/), the builders, publish-run, build-pages, preview,
                           the sample site it ships (sample/) and the screenshot tests (screenshots/)
 actions/                  the CI part: the composite actions (one folder each, lib/ for their shared git steps) and
                           its README, with the rules the actions and the generated workflows follow
+plugins/simpright-qa/     the agents part: the simpright-qa plugin (agents/, skills/, shared/), listed in the kit's
+                          marketplace, .claude-plugin/marketplace.json
 examples/sample-project/  a made-up shop's simpright.yml, scenarios, bugs, specs and workflows: what the tests run on;
                           its package.json links the packages, for the e2e workflow
 test/helpers.ts           sampleProject(): a fresh copy of the sample project for a test to change
-scripts/                  the repo's own scripts: check-packages.ts, sample-site.ts, kit-data.ts, release.ts
+test/plugin.test.ts       the plugins' checks: their fields, names, paths and simpright.yml keys, and no app's facts
+scripts/                  the repo's own scripts: check-packages.ts, sample-site.ts, kit-data.ts, release.ts,
+                          validate-plugins.ts
 ```
 
 ## Working on the kit
@@ -23,6 +28,7 @@ npm install
 npm test             # builds the packages, then runs every packages/*/test/*.test.ts with node:test
 npm run typecheck    # builds, then checks the sources, the tests and the scripts
 npm run check:packages   # what each package would publish
+npm run validate:plugins # Claude Code's own checks of the marketplace and the plugins
 ```
 
 - The sources are TypeScript (Node 22.18 or later runs them directly in the repo). `tsc` builds each package into `dist/` for publishing, because Node doesn't strip types inside `node_modules`.
@@ -38,6 +44,16 @@ npm run check:packages   # what each package would publish
 - The **E2E** workflow (`.github/workflows/e2e.yml`) runs the actions from the pull request's commit on the sample project, publishing to this repository's `gh-pages` branch, which nothing serves. A pull request from a fork skips it (its token can't push).
 - To try an action change on a real project before a release, point its workflows at the branch's commit: `node packages/simpright/dist/cli.js apply --root ../SimpRight --kit-ref <commit>`, push that project's branch, and run its workflows from it. A released `simpright` pins its own release's commit instead.
 
+## The plugins
+
+- `plugins/<name>/` is one Claude Code plugin: `.claude-plugin/plugin.json`, its agents, skills and shared files, and its README. The marketplace (`.claude-plugin/marketplace.json`, named `simpright-kit`) lists each one by a relative path and no version: a plugin's version is its `plugin.json`'s, the kit's, which `release.ts` sets.
+- The texts hold no app's facts: what an agent needs to know about a project comes from its `simpright.yml` and the files that names. They name the plugin's own agents and skills with its prefix (`simpright-qa:ui-test-engineer`), its files through `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_SKILL_DIR}` (which Claude Code substitutes in SKILL.md files and agent bodies only), and only `simpright.yml` keys the schema has. `test/plugin.test.ts` checks all of that, and `npm run validate:plugins` runs `claude plugin validate --strict` (the CLI from an exact devDependency), as the `ci` job does.
+- A change to a key in the schema changes the texts that name it, and the other way round.
+- **Trying a change** in a project, with the kit's folder next to it:
+  - for one session: `claude --plugin-dir ../SimpRightKit/plugins/simpright-qa`, which takes the place of an installed `simpright-qa`;
+  - or for the project, on your machine only: `claude plugin marketplace add ../SimpRightKit --scope local`, then `claude plugin install simpright-qa@simpright-kit --scope local`. A marketplace added from a folder loads its plugins in place, so an edit applies after `/reload-plugins`, with no version change. Where the project's committed settings declare `simpright-kit` from GitHub too, check in `/plugin` which one the session loaded: there's one marketplace per name.
+  - A resumed agent runs on its current text: don't edit an agent while one of its runs may still be resumed.
+
 ## The sample site and the screenshots
 
 ```bash
@@ -51,7 +67,7 @@ node packages/portal/dist/cli.js preview --sample    # look at it on http://127.
 
 ## Versions and releases
 
-The three packages share one version, and each pins its siblings exactly (`"simpright": "0.1.0"`), so a project installs one kit release; the actions are that release's too, at its tag's commit. Every change goes into `CHANGELOG.md` under `## <next version> (unreleased)`.
+The three packages share one version, and each pins its siblings exactly (`"simpright": "0.1.0"`), so a project installs one kit release; the actions are that release's too, at its tag's commit, and so are the plugins: `simpright apply` points a project's marketplace at the tag (`ref: v<version>`). Every change goes into `CHANGELOG.md` under `## <next version> (unreleased)`.
 
 `main` takes changes through pull requests only (its ruleset requires the `ci` check), so a release commit goes through one too, and the tag goes on `main` after the merge:
 
@@ -65,7 +81,7 @@ git tag -a v0.2.0 -m "SimpRight Kit v0.2.0"
 git push origin v0.2.0
 ```
 
-The tag starts the **Release** workflow: it checks the tag against the versions, runs the typecheck and the tests, then waits for an approval in the `npm` environment (Actions → the run → Review deployments). After that it records the tagged commit in `simpright`'s `dist/release.json` (what `simpright apply` pins the actions to), publishes the packages through npm trusted publishing (no npm token; each version gets provenance from the run) and makes the GitHub release from the CHANGELOG entry.
+The tag starts the **Release** workflow: it checks the tag against the versions, runs the typecheck and the tests, then waits for an approval in the `npm` environment (Actions → the run → Review deployments). After that it records the tagged commit in `simpright`'s `dist/release.json` (what `simpright apply` pins the actions to), publishes the packages through npm trusted publishing (no npm token; each version gets provenance from the run) and makes the GitHub release from the CHANGELOG entry. The plugins need no publishing: the tag is what projects' marketplaces fetch. Check them from a clone at the tag with `claude plugin validate .`.
 
 The one-time setup behind it (done for 0.1.0):
 

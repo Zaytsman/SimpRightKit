@@ -27,10 +27,10 @@ You can't ask the user questions, so never wait for an answer: put open question
 
 1. **The scenario is the specification.** Implement every step, in order, with its text verbatim as the step title. Never drop, merge, reorder or weaken a check. Never change an assertion so that a test passes: if the app behaves differently from the scenario, the test fails and you report it.
 2. **Never invent contract details or test data.** Endpoints, fields, status codes and messages come from the contract in the profile's contract folder. Data a test needs (ids, seeded records) comes from the steps themselves, the project's test-data module, or an API call the steps describe. If you can't find it, it's a "Decision needed", never a guess.
-3. **Live API guardrails** from the profile's `liveApi`:
+3. **Live API guardrails** from the profile's `agents.liveApi`:
    - `writes: ask`: a scenario that creates, changes or deletes data (in any step, including setup) is implemented and run only when the brief lists it as approved. Unapproved ones are left as they are (`manual`) and listed in the report.
    - `writes: never`: such scenarios are never implemented or run; `allowed`: no approval needed.
-   - Items in `liveApi.dangerous` are never run. The plan says how a scenario avoids them, or that it can't be automated safely.
+   - Items in `agents.liveApi.dangerous` are never run. The plan says how a scenario avoids them, or that it can't be automated safely.
 4. **Change only test-side code:** specs, clients, services, DTOs, fixtures, test data, and the scenario and contract fields described below. Never edit the application under test. Changes to shared files are additive: no signature or behaviour change that other tests depend on.
 5. **Scenario files:** you change only `status` and `automatedIn` (and `knownIssue` with its `bug`, when the brief says the user approved one). Never their steps or names; if a step can't be implemented as written, say so in the plan.
 6. **No secrets.** Don't open `.env` files or print credentials. Tests get users and tokens through the project's fixtures. Search the project with `git grep`, or with Grep and Glob in the folders the profile names: a search of the whole folder also lists git-ignored files, such as a local `.claude/` folder with the user's private notes, which you never open.
@@ -39,8 +39,8 @@ You can't ask the user questions, so never wait for an answer: put open question
 
 1. Read the profile, then every file in `project.conventions`.
 2. Read the scenario files in scope, and the contract for each endpoint they call (`paths.contracts`): parameters, body rules, responses, error bodies, caching notes, suspected bugs, and the "data required" table if there is one.
-3. Read every exemplar in `api.exemplars`, and the existing clients, services, DTOs and specs of the areas in scope, so you know what exists and the style to copy.
-4. Note `api.rules`, `api.knownIssue` and `commands`.
+3. Read every exemplar in `agents.api.exemplars`, and the existing clients, services, DTOs and specs of the areas in scope, so you know what exists and the style to copy.
+4. Note `agents.api.rules`, `agents.api.knownIssue` and `commands`.
 
 ## Phase `plan`: write nothing
 
@@ -85,7 +85,7 @@ Keep the "Needs" honest: a method that exists is reused, not rewritten.
 6. **Finish:**
    - Set `status: automated` and `automatedIn: <spec path>` on every scenario you implemented, including those failing on app behaviour (their test exists; the report says it fails). Run `commands.validateScenarios` again.
    - In the contract, change the origin tag to `_(verified)_` on each status-code line (and other fact) that a **passing** test asserted exactly. Touch no other line.
-   - When the brief says the user approved a `knownIssue` for a scenario: add it and its `bug` to the scenario in the conventions' key order (just before `steps`) and the profile's `api.knownIssue` line (with the bug ID and the text) right before its test's first `test.step`, after any setup code, then run the spec again: it must now pass as an expected failure. The bug is an open one from `paths.bugs` with the same root cause, or, when the user approved a new one, write its file (the next free `ids.bugs` ID, the format of `paths.bugSchema`) from the request, expected and actual you reported.
+   - When the brief says the user approved a `knownIssue` for a scenario: add it and its `bug` to the scenario in the conventions' key order (just before `steps`) and the profile's `agents.api.knownIssue` line (with the bug ID and the text) right before its test's first `test.step`, after any setup code, then run the spec again: it must now pass as an expected failure. The bug is an open one from `paths.bugs` with the same root cause, or, when the user approved a new one, write its file (the next free `ids.bugs` ID, the format of `paths.bugSchema`) from the request, expected and actual you reported.
 
 ## Report (`implement` phase)
 

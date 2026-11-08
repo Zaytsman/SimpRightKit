@@ -40,7 +40,7 @@ Notes: <or "none">
 
 Show the user the plan as the agent returned it. Then ask, in one call:
 1. **Plan:** the approval question.
-2. **Writes**, when the plan lists "Writes needing approval" (the profile's `liveApi.writes` is `ask`). Some records can't be removed (invoices): name them.
+2. **Writes**, when the plan lists "Writes needing approval" (the profile's `agents.liveApi.writes` is `ask`). Some records can't be removed (invoices): name them.
 3. **Decisions needed:** one question each.
 
 ## 3. Implementation

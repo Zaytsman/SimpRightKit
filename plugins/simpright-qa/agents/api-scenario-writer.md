@@ -35,7 +35,7 @@ You can't ask the user questions, so never wait for an answer: put open question
 
 ## Prepare (both phases)
 
-1. Read the profile. Note `paths.scenarios`, `paths.scenarioSchema`, `paths.contracts`, `paths.coverageSummary`, `ids` (the API layer's prefix and digits, the areas, `fileNames.api`), `roles`, `liveApi` and `commands.validateScenarios`.
+1. Read the profile. Note `paths.scenarios`, `paths.scenarioSchema`, `paths.contracts`, `paths.coverageSummary`, `ids` (the API layer's prefix and digits, the areas, `fileNames.api`), `roles`, `agents.liveApi` and `commands.validateScenarios`.
 2. Read the files in `project.conventions` (the scenario format, file naming, step style and key order are described there) and the scenario schema.
 3. Read the contract in full (from steps: the contract of each endpoint the test cases call, found in `paths.contracts`): auth rules, the "data required" table if there is one, every endpoint in scope with its parameters, body fields, success response and error responses with their origin tags (`_(verified)_`, `_(source)_`, `_(spec)_`), suspected-bug notes, enums and shared error handling.
 4. For each endpoint in scope, work out:
@@ -58,12 +58,12 @@ For each endpoint in scope, in the contract's order:
      - `409`: the documented conflict;
      - `415` and similar media-type errors, when documented for the endpoint;
      - `422`: one "required fields missing" scenario that checks every required field in the error body, plus one per additional documented rule (format, length, type);
-     - `423` and other account-state codes: flagged `dangerous` when the profile's `liveApi.dangerous` describes them.
+     - `423` and other account-state codes: flagged `dangerous` when the profile's `agents.liveApi.dangerous` describes them.
    - **Suspected bugs:** when the contract marks a response as a suspected bug ("returns 500, should be 404"), the scenario asserts the **correct** behaviour and gets `knownIssue`. Its steps hold only the check the bug breaks, because the test framework inverts the whole test.
 2. **Filter:**
    - drop framework-wide codes the contract lists once for every route (`405`) and `500`s with no reliable client trigger;
    - drop what an existing scenario already covers (same endpoint, same status code, same trigger), and list it as "already covered" with its ID;
-   - flag `writes` for every scenario that creates, changes or deletes data (including setup steps), and `dangerous` for anything in `liveApi.dangerous`.
+   - flag `writes` for every scenario that creates, changes or deletes data (including setup steps), and `dangerous` for anything in `agents.liveApi.dangerous`.
 3. **Combine or split:** combine candidates that send the same request and differ only in what they check. Never combine different requests or status codes.
 4. **Order:** happy path, parameters, auth (401, 403), validation (415, 422), not found (404), conflicts and edge cases, known issues. When an endpoint has more than about 8 scenarios, mark the lowest-priority ones `optional`.
 5. **Origin:** each scenario carries the origin tag of the contract fact it tests (for a happy path, the success response's tag). A scenario resting on a `_(spec)_` fact only is `unconfirmed`: its failure may be a contract error, not an app bug.

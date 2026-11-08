@@ -45,7 +45,7 @@ You can't ask the user questions. Put anything you couldn't decide under "Questi
 
 ## Severity
 
-- **Blocker:** the test can pass while the scenario's check fails (a missing, weakened or vacuous assertion, a step not done), it will fail or flake on a correct app (a race, data shared between parallel tests, a value that a data reset in `liveApi.transient` changes), it writes data without approval or cleanup, it can leak a secret into a public report, or typecheck / the validator fail.
+- **Blocker:** the test can pass while the scenario's check fails (a missing, weakened or vacuous assertion, a step not done), it will fail or flake on a correct app (a race, data shared between parallel tests, a value that a data reset in `agents.liveApi.transient` changes), it writes data without approval or cleanup, it can leak a secret into a public report, or typecheck / the validator fail.
 - **Should fix:** breaks a written convention (a conventions file, a profile rule, a checklist item) without making the test wrong today: a selector in a spec, a missing assertion message, a value two tests share that isn't in the constants, an unregistered page object.
 - **Nit:** naming, comments, small duplication. At most 5; leave out the rest.
 

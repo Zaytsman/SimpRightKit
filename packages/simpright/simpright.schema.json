@@ -2,9 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "simpright.schema.json",
   "title": "SimpRight project config",
-  "description": "The project's toolchain config, read by the QA agents and the scripts (never by tests): paths, commands, ID rules, roles, API and UI exemplar files and rules, live app guardrails, the parts in use, CI facts, the test runs and the portal's text.",
+  "description": "The project's toolchain config, read by the QA agents and the scripts (never by tests): paths, commands, ID rules, roles, the agents' facts (exemplar files, rules and live app guardrails), the parts in use, CI facts, the test runs and the portal's text.",
   "type": "object",
-  "required": ["project", "paths", "commands", "ids", "roles", "liveApi"],
+  "required": ["project", "paths", "commands", "ids", "roles"],
   "additionalProperties": false,
   "definitions": {
     "path": { "type": "string", "minLength": 1, "pattern": "^[^/\\\\]", "description": "Relative to the repo root." },
@@ -153,100 +153,108 @@
       "minItems": 1,
       "uniqueItems": true
     },
-    "api": {
+    "agents": {
       "type": "object",
-      "description": "Optional: only projects with API tests have it.",
-      "required": ["exemplars", "knownIssue", "rules"],
+      "description": "The QA agents' facts, read by the kit's simpright-qa plugin (parts.agents): each layer's exemplar files, known-issue line and rules, and the guardrails for the live app. The prose conventions stay in project.conventions. simpright doctor requires it with parts.agents.",
+      "required": ["liveApi"],
       "additionalProperties": false,
       "properties": {
-        "exemplars": {
+        "api": {
           "type": "object",
-          "description": "Existing files whose style new code copies.",
-          "required": ["client", "service", "dto", "fixtures", "spec"],
+          "description": "Optional: only projects with API tests have it.",
+          "required": ["exemplars", "knownIssue", "rules"],
           "additionalProperties": false,
           "properties": {
-            "client": { "$ref": "#/definitions/path" },
-            "service": { "$ref": "#/definitions/path" },
-            "dto": { "$ref": "#/definitions/path" },
-            "fixtures": { "$ref": "#/definitions/path" },
-            "spec": { "$ref": "#/definitions/path" },
-            "helpers": { "$ref": "#/definitions/path", "description": "Assertion and attachment helpers." },
-            "checks": { "$ref": "#/definitions/path", "description": "Shared checks for steps (status, body, errors), reused by every spec." },
-            "steps": { "$ref": "#/definitions/path", "description": "Shared step helpers: send and attach, auth labels, templates for tests that differ only in data." },
-            "cleanup": { "$ref": "#/definitions/path", "description": "Where the cleanup fixture is defined." },
-            "constants": { "$ref": "#/definitions/path", "description": "Shared seeded test values." },
-            "testDataUtils": { "$ref": "#/definitions/path", "description": "Helpers factories use, such as unique names." }
+            "exemplars": {
+              "type": "object",
+              "description": "Existing files whose style new code copies.",
+              "required": ["client", "service", "dto", "fixtures", "spec"],
+              "additionalProperties": false,
+              "properties": {
+                "client": { "$ref": "#/definitions/path" },
+                "service": { "$ref": "#/definitions/path" },
+                "dto": { "$ref": "#/definitions/path" },
+                "fixtures": { "$ref": "#/definitions/path" },
+                "spec": { "$ref": "#/definitions/path" },
+                "helpers": { "$ref": "#/definitions/path", "description": "Assertion and attachment helpers." },
+                "checks": { "$ref": "#/definitions/path", "description": "Shared checks for steps (status, body, errors), reused by every spec." },
+                "steps": { "$ref": "#/definitions/path", "description": "Shared step helpers: send and attach, auth labels, templates for tests that differ only in data." },
+                "cleanup": { "$ref": "#/definitions/path", "description": "Where the cleanup fixture is defined." },
+                "constants": { "$ref": "#/definitions/path", "description": "Shared seeded test values." },
+                "testDataUtils": { "$ref": "#/definitions/path", "description": "Helpers factories use, such as unique names." }
+              }
+            },
+            "knownIssue": {
+              "type": "string",
+              "pattern": "\\{bug\\}.*\\{text\\}",
+              "description": "Code that marks a test as hitting a known issue; {bug} is the scenario's bug ID and {text} its knownIssue. simpright-scenarios validate checks that each such test has it (a layer without agents facts gets the kit's default, test.fail(true, 'Known issue {bug}: {text}');)."
+            },
+            "rules": {
+              "type": "array",
+              "description": "Agent-critical rules only; everything else is in project.conventions.",
+              "items": { "type": "string", "minLength": 1 }
+            }
           }
         },
-        "knownIssue": {
-          "type": "string",
-          "pattern": "\\{bug\\}.*\\{text\\}",
-          "description": "Code that marks a test as hitting a known issue; {bug} is the scenario's bug ID and {text} its knownIssue."
-        },
-        "rules": {
-          "type": "array",
-          "description": "Agent-critical rules only; everything else is in project.conventions.",
-          "items": { "type": "string", "minLength": 1 }
-        }
-      }
-    },
-    "ui": {
-      "type": "object",
-      "description": "Optional: only projects with UI tests have it.",
-      "required": ["exemplars", "knownIssue", "rules"],
-      "additionalProperties": false,
-      "properties": {
-        "exemplars": {
+        "ui": {
           "type": "object",
-          "description": "Existing files whose style new code copies.",
-          "required": ["page", "component", "fixtures", "spec"],
+          "description": "Optional: only projects with UI tests have it.",
+          "required": ["exemplars", "knownIssue", "rules"],
           "additionalProperties": false,
           "properties": {
-            "page": { "$ref": "#/definitions/path" },
-            "basePage": { "$ref": "#/definitions/path", "description": "The base class pages extend." },
-            "component": { "$ref": "#/definitions/path", "description": "A reusable part of a page." },
-            "baseComponent": { "$ref": "#/definitions/path", "description": "The base class components extend." },
-            "dialog": { "$ref": "#/definitions/path", "description": "A dialog, or the base class dialogs extend." },
-            "flow": { "$ref": "#/definitions/path", "description": "A multi-page user journey." },
-            "fixtures": { "$ref": "#/definitions/path", "description": "Where page, component, dialog and flow fixtures are registered." },
-            "preconditionFixture": { "$ref": "#/definitions/path", "description": "A fixture that starts a test on a prepared page." },
-            "fixturesIndex": { "$ref": "#/definitions/path", "description": "Where precondition fixtures are exported." },
-            "spec": { "$ref": "#/definitions/path" },
-            "constants": { "$ref": "#/definitions/path", "description": "Shared seeded test values." }
+            "exemplars": {
+              "type": "object",
+              "description": "Existing files whose style new code copies.",
+              "required": ["page", "component", "fixtures", "spec"],
+              "additionalProperties": false,
+              "properties": {
+                "page": { "$ref": "#/definitions/path" },
+                "basePage": { "$ref": "#/definitions/path", "description": "The base class pages extend." },
+                "component": { "$ref": "#/definitions/path", "description": "A reusable part of a page." },
+                "baseComponent": { "$ref": "#/definitions/path", "description": "The base class components extend." },
+                "dialog": { "$ref": "#/definitions/path", "description": "A dialog, or the base class dialogs extend." },
+                "flow": { "$ref": "#/definitions/path", "description": "A multi-page user journey." },
+                "fixtures": { "$ref": "#/definitions/path", "description": "Where page, component, dialog and flow fixtures are registered." },
+                "preconditionFixture": { "$ref": "#/definitions/path", "description": "A fixture that starts a test on a prepared page." },
+                "fixturesIndex": { "$ref": "#/definitions/path", "description": "Where precondition fixtures are exported." },
+                "spec": { "$ref": "#/definitions/path" },
+                "constants": { "$ref": "#/definitions/path", "description": "Shared seeded test values." }
+              }
+            },
+            "knownIssue": {
+              "type": "string",
+              "pattern": "\\{bug\\}.*\\{text\\}",
+              "description": "Code that marks a test as hitting a known issue; {bug} is the scenario's bug ID and {text} its knownIssue. simpright-scenarios validate checks that each such test has it (a layer without agents facts gets the kit's default, test.fail(true, 'Known issue {bug}: {text}');)."
+            },
+            "rules": {
+              "type": "array",
+              "description": "Agent-critical rules only; everything else is in project.conventions.",
+              "items": { "type": "string", "minLength": 1 }
+            }
           }
         },
-        "knownIssue": {
-          "type": "string",
-          "pattern": "\\{bug\\}.*\\{text\\}",
-          "description": "Code that marks a test as hitting a known issue; {bug} is the scenario's bug ID and {text} its knownIssue."
-        },
-        "rules": {
-          "type": "array",
-          "description": "Agent-critical rules only; everything else is in project.conventions.",
-          "items": { "type": "string", "minLength": 1 }
-        }
-      }
-    },
-    "liveApi": {
-      "type": "object",
-      "description": "Guardrails for anything that calls the live app, API or UI.",
-      "required": ["writes"],
-      "additionalProperties": false,
-      "properties": {
-        "writes": {
-          "type": "string",
-          "enum": ["never", "ask", "allowed"],
-          "description": "Whether agents may run tests or checks that change data on the live app (API or UI)."
-        },
-        "dangerous": {
-          "type": "array",
-          "description": "Calls that cause lasting harm, with how to avoid it.",
-          "items": { "type": "string", "minLength": 1 }
-        },
-        "transient": {
-          "type": "array",
-          "description": "Known ways the live app misbehaves for a while (re-seeds, caches, slow periods, data other visitors change), so failures can be told apart from bugs.",
-          "items": { "type": "string", "minLength": 1 }
+        "liveApi": {
+          "type": "object",
+          "description": "Guardrails for anything that calls the live app, API or UI.",
+          "required": ["writes"],
+          "additionalProperties": false,
+          "properties": {
+            "writes": {
+              "type": "string",
+              "enum": ["never", "ask", "allowed"],
+              "description": "Whether agents may run tests or checks that change data on the live app (API or UI)."
+            },
+            "dangerous": {
+              "type": "array",
+              "description": "Calls that cause lasting harm, with how to avoid it.",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "transient": {
+              "type": "array",
+              "description": "Known ways the live app misbehaves for a while (re-seeds, caches, slow periods, data other visitors change), so failures can be told apart from bugs.",
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
         }
       }
     },
@@ -257,7 +265,7 @@
       "properties": {
         "scenarios": { "type": "boolean", "description": "Scenario and bug files, checked by simpright-scenarios validate (@simpright/scenarios)." },
         "inspector": { "type": "boolean", "description": "The read-only page inspector (commands.inspectUi)." },
-        "agents": { "type": "boolean", "description": "The QA agents and their skills." },
+        "agents": { "type": "boolean", "description": "The QA agents: the kit's simpright-qa plugin, which simpright apply enables in .claude/settings.json. Needs agents." },
         "coverage": {
           "description": "The optional API coverage reporter, or false.",
           "oneOf": [

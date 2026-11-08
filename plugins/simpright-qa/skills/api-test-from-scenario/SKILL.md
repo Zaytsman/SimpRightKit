@@ -6,13 +6,13 @@ user-invocable: false
 
 # API spec from a scenario file
 
-Copy the structure of the exemplar spec (`api.exemplars.spec` in the profile) and follow the spec conventions in the project's conventions files; the scenario validator checks the parts marked "(checked)".
+Copy the structure of the exemplar spec (`agents.api.exemplars.spec` in the profile) and follow the spec conventions in the project's conventions files; the scenario validator checks the parts marked "(checked)".
 
 ## File
 
 - One spec per scenario file, with the same name, in the same layer and area folders under the tests path: `test-scenarios/api/products/put-products-by-product-id.yml` → `tests/api/products/put-products-by-product-id.spec.ts`. (checked)
 - The comment `// Scenarios: <scenario file path>` at the top. (checked)
-- Imports only from the project's fixtures entry point, the DTOs, the test-data modules and the assertion helpers (`api.exemplars.helpers`); no direct construction of clients or services.
+- Imports only from the project's fixtures entry point, the DTOs, the test-data modules and the assertion helpers (`agents.api.exemplars.helpers`); no direct construction of clients or services.
 - One `test.describe('<the file's tags joined by spaces> - <suite>')`. (checked)
 
 ## Tests
@@ -20,10 +20,10 @@ Copy the structure of the exemplar spec (`api.exemplars.spec` in the profile) an
 - One `test('<ID>: <name>')` per scenario, with the name verbatim (escape quotes the way the exemplar does). (checked)
 - A scenario with `role` runs as that role: when every scenario in the file has the same role, set it once with `test.use({ role })` inside the describe; otherwise wrap that one test in an anonymous `test.describe(() => { test.use({ role: '<role>' }); test(...) })`.
 - A scenario with `tags` (`["@smoke"]`): the test gets Playwright's tag option and keeps its title: `test('<ID>: <name>', { tag: '@smoke' }, async (...) => ...)`. A smoke test only makes writes it cleans up itself.
-- A scenario with `knownIssue`: the profile's `api.knownIssue` snippet with the scenario's `bug` ID and the text verbatim goes right before the test's first `test.step`, after any setup code in the body (setup helpers that create a record or a throwaway user), so a failed setup is a real failure, not "bug still present". With no setup it's the first line.
+- A scenario with `knownIssue`: the profile's `agents.api.knownIssue` snippet with the scenario's `bug` ID and the text verbatim goes right before the test's first `test.step`, after any setup code in the body (setup helpers that create a record or a throwaway user), so a failed setup is a real failure, not "bug still present". With no setup it's the first line.
 - Tests in a file run in parallel and each file runs on its own: no state shared between tests, no order between them.
 - State shared between steps goes in `let` variables at the top of the test; values only this test uses are `const`s there too.
-- **Reuse first:** before writing a helper, look in the shared checks (`api.exemplars.checks`), the step helpers (`api.exemplars.steps`) and the area's `*Steps.ts`; a spec never redefines one. Tests whose bodies differ only in their data go through one template function that takes the step titles and the data (shared ones: `checkStatusAndMessage`, `checkRejectedBody`, `checkValidationRedirect`), called from a literal `test('<ID>: <name>', ...)` per scenario. Never generate tests in a loop: the validator finds titles only in literal calls.
+- **Reuse first:** before writing a helper, look in the shared checks (`agents.api.exemplars.checks`), the step helpers (`agents.api.exemplars.steps`) and the area's `*Steps.ts`; a spec never redefines one. Tests whose bodies differ only in their data go through one template function that takes the step titles and the data (shared ones: `checkStatusAndMessage`, `checkRejectedBody`, `checkValidationRedirect`), called from a literal `test('<ID>: <name>', ...)` per scenario. Never generate tests in a loop: the validator finds titles only in literal calls.
 
 ## Steps
 
