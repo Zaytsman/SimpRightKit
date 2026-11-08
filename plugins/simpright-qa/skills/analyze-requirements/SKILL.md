@@ -1,18 +1,18 @@
 ---
 name: analyze-requirements
-description: Analyse a user story, bug report or feature description, write a short analysis document with a test plan that puts each check on the API or the UI (API first, because it's cheaper and faster), then have the scenario writers turn the plan into API and UI scenarios. Two checkpoints - the user approves the plan, then the scenarios. Use when the user asks to analyse a story or bug, plan its tests, or create test cases for both layers from a work item, e.g. "/analyze-requirements Product_Detail.md" or "/analyze-requirements BUG-45.md".
+description: Analyse a user story, bug report or feature description, write a short analysis document with a test plan that puts each check on the API or the UI (API first, because it's cheaper and faster), then have the scenario writers turn the plan into API and UI scenarios. Two checkpoints - the user approves the plan, then the scenarios. Use when the user asks to analyse a story or bug, plan its tests, or create test cases for both layers from a work item, e.g. "/simpright-qa:analyze-requirements Product_Detail.md" or "/simpright-qa:analyze-requirements BUG-45.md".
 argument-hint: "<story or bug file | pasted text> [AC ...]"
 ---
 
 # Analyse a work item and plan its tests
 
-Three agents do the work: the `requirements-analyst` writes the analysis and the test plan, then the `api-scenario-writer` and the `ui-scenario-writer` write the scenarios for the items on their layer. Your part: settle the brief, run the agents, hold the two checkpoints with the user, then check and report. A subagent can't ask the user anything or start other agents, so the checkpoints and the hand-offs happen here.
+Three agents do the work: the `simpright-qa:requirements-analyst` writes the analysis and the test plan, then the `simpright-qa:api-scenario-writer` and the `simpright-qa:ui-scenario-writer` write the scenarios for the items on their layer. Your part: settle the brief, run the agents, hold the two checkpoints with the user, then check and report. A subagent can't ask the user anything or start other agents, so the checkpoints and the hand-offs happen here.
 
 Arguments, if any: $ARGUMENTS
 
 ## How to ask
 
-Before the first question, read `../_shared/how-to-ask.md` (next to this skill's folder) and follow it for every question in this skill.
+Before the first question, read `${CLAUDE_PLUGIN_ROOT}/shared/how-to-ask.md` and follow it for every question in this skill.
 
 ## 1. Settle the brief
 
@@ -25,14 +25,14 @@ Before the first question, read `../_shared/how-to-ask.md` (next to this skill's
 
 ## 2. Checkpoint 1: the analysis
 
-Start the `requirements-analyst` subagent with a brief that stands on its own (it can't see this conversation):
+Start the `simpright-qa:requirements-analyst` subagent with a brief that stands on its own (it can't see this conversation):
 
 ```
 Profile: <absolute path of simpright.yml>
 Document: <absolute path, or "pasted:" followed by the full text>
 Criteria: <list or "all">
-Layer rules: <absolute path of references/layer-rules.md in this skill>
-Analysis format: <absolute path of references/analysis-format.md in this skill>
+Layer rules: ${CLAUDE_SKILL_DIR}/references/layer-rules.md
+Analysis format: ${CLAUDE_SKILL_DIR}/references/analysis-format.md
 Phase: analyze
 Notes: <or "none">
 ```
@@ -41,7 +41,7 @@ Show the user the analysis as the agent returned it: the summary, the test plan 
 1. **Analysis:** the approval question (edits: move an item to the other layer, drop or reword items).
 2. **Decisions needed:** one question each; a contract gap is one too: "Fill the contract first", "Go on without it".
 
-If a decision is a **contract gap** the user wants filled first, run the `write-api-contracts` skill's steps for that area after the analyst's `write` phase and before checkpoint 2 (ask its questions: the scope, usually the whole area, and live checks), then continue here; the analysis doesn't need to be re-run, because its items name the endpoints. If the user approves a new area or role, add it to `ids.areas` or `roles` in the profile yourself (the agents don't change the profile).
+If a decision is a **contract gap** the user wants filled first, run the `simpright-qa:write-api-contracts` skill's steps for that area after the analyst's `write` phase and before checkpoint 2 (ask its questions: the scope, usually the whole area, and live checks), then continue here; the analysis doesn't need to be re-run, because its items name the endpoints. If the user approves a new area or role, add it to `ids.areas` or `roles` in the profile yourself (the agents don't change the profile).
 
 Then continue **the same agent** with SendMessage:
 
@@ -50,7 +50,7 @@ Phase: write
 Approved, with these edits: <the user's edits and decisions, or "none">
 ```
 
-If it can't be continued, start a new `requirements-analyst` with the brief above, `Phase: write`, and the approved analysis pasted in full, followed by the edits. Its report holds the document's path and the approved API and UI items.
+If it can't be continued, start a new `simpright-qa:requirements-analyst` with the brief above, `Phase: write`, and the approved analysis pasted in full, followed by the edits. Its report holds the document's path and the approved API and UI items.
 
 ## 3. Checkpoint 2: the scenarios
 
@@ -58,8 +58,8 @@ Start the writers for the layers that have new items (skip a layer with none, an
 
 ```
 Profile: <absolute path of simpright.yml>
-Contract: <absolute paths of the contracts the API items name>          (api-scenario-writer only)
-Document: <absolute path of the work item, or "pasted:" with the text>   (ui-scenario-writer only)
+Contract: <absolute paths of the contracts the API items name>          (simpright-qa:api-scenario-writer only)
+Document: <absolute path of the work item, or "pasted:" with the text>   (simpright-qa:ui-scenario-writer only)
 Analysis: <absolute path of the analysis document>
 Items: <the analyst's API items or UI items, pasted as reported>
 Phase: propose
@@ -80,6 +80,6 @@ If a writer can't be continued, start a new one with its brief, `Phase: write`, 
 1. Fill in the analysis document's "Scenarios" column yourself from the writers' reports: the IDs written for each item, `<ID> (existing)` for items an existing scenario covers, and `dropped at review` for items the user dropped at checkpoint 2. Update the totals with the new scenarios and their file, and the parts that are out of date now: a contract gap that was filled (and the new contract sections), an area that was added, a decision changed at checkpoint 2.
 2. Run the profile's `commands.validateScenarios` and confirm it passes.
 3. Tell the user briefly: the analysis document, the scenario files created and extended with their IDs per layer, the API/UI split, the validator result, the flagged scenarios (writes, data, dangerous, known issues), what's not tested and why.
-4. Suggest the next step: review the diff (`docs/analysis/` and the scenario folder), then automate, API first: `/implement-api-scenarios <files or IDs>`, then `/implement-ui-scenarios <files or IDs>`.
+4. Suggest the next step: review the diff (the analysis folder, `paths.analysis`, and the scenario folder), then automate, API first: `/simpright-qa:implement-api-scenarios <files or IDs>`, then `/simpright-qa:implement-ui-scenarios <files or IDs>`.
 
 Don't commit anything unless the user asks.

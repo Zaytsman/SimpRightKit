@@ -1,18 +1,18 @@
 ---
 name: implement-api-scenarios
-description: Automate API test scenarios (the YAML files in the project's scenario folder) as test specs, with a checkpoint where the user approves the plan and the tests that change data before any code is written. Use when the user asks to implement, automate or write tests for API scenarios, a scenario file or an API area, e.g. "/implement-api-scenarios get-products-by-product-id.yml".
+description: Automate API test scenarios (the YAML files in the project's scenario folder) as test specs, with a checkpoint where the user approves the plan and the tests that change data before any code is written. Use when the user asks to implement, automate or write tests for API scenarios, a scenario file or an API area, e.g. "/simpright-qa:implement-api-scenarios get-products-by-product-id.yml".
 argument-hint: "<scenario IDs | scenario file | area>"
 ---
 
 # Implement API scenarios
 
-The work is done by the `api-test-engineer` subagent, in two phases: a plan, then the code and the test runs. Your part: settle the brief, run the plan, get the user's approval, run the implementation, then check and report. A subagent can't ask the user anything, so the checkpoints happen here.
+The work is done by the `simpright-qa:api-test-engineer` subagent, in two phases: a plan, then the code and the test runs. Your part: settle the brief, run the plan, get the user's approval, run the implementation, then check and report. A subagent can't ask the user anything, so the checkpoints happen here.
 
 Arguments, if any: $ARGUMENTS
 
 ## How to ask
 
-Before the first question, read `../_shared/how-to-ask.md` (next to this skill's folder) and follow it for every question in this skill.
+Before the first question, read `${CLAUDE_PLUGIN_ROOT}/shared/how-to-ask.md` and follow it for every question in this skill.
 
 ## 1. Settle the brief
 
@@ -29,7 +29,7 @@ Before the first question, read `../_shared/how-to-ask.md` (next to this skill's
 
 ## 2. Plan
 
-Start the `api-test-engineer` subagent with a brief that stands on its own (it can't see this conversation):
+Start the `simpright-qa:api-test-engineer` subagent with a brief that stands on its own (it can't see this conversation):
 
 ```
 Profile: <absolute path of simpright.yml>
@@ -54,7 +54,7 @@ Writes approved: <IDs, "all", or "none">
 Decisions: <the user's answers>
 ```
 
-If the agent can't be continued, start a new `api-test-engineer` with the brief from step 2, `Phase: implement`, the plan pasted in full, and the lines above.
+If the agent can't be continued, start a new `simpright-qa:api-test-engineer` with the brief from step 2, `Phase: implement`, the plan pasted in full, and the lines above.
 
 ## 4. Check and report
 

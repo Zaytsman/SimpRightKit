@@ -27,7 +27,7 @@ It exits with 0 when every check passes and 1 when one fails, each problem on it
 
 ## What `doctor` checks
 
-- **The config:** `simpright.yml` matches its schema, and every path it names exists (the conventions, `paths`, the exemplars), except `paths.coverageSummary`, which a test run writes. A portal (`parts.portal`) needs `runs` and a `portal` section, and its Bugs page needs `paths.bugs`. `portal.titleAccent` is the end of `portal.title`.
+- **The config:** `simpright.yml` matches its schema, and every path it names exists (the conventions, `paths`, the exemplars), except `paths.coverageSummary`, which a test run writes, and `paths.appSource`, the app's source checkout, which CI doesn't have. A portal (`parts.portal`) needs `runs` and a `portal` section, and its Bugs page needs `paths.bugs`. `portal.titleAccent` is the end of `portal.title`.
 - **The kit:** the installed kit packages share one version.
 - **The runs** (`runs`): each has exactly one caller of `.github/workflows/playwright-run.yml`, with the run's id as its `family`. The caller matches the run: its project, grep, paths, schedule, a manual start (`workflow_dispatch`), coverage publishing and the number of runs it keeps. An `areaPicker` run's `area` input offers `all` plus the folders of its project's tests. A run with a `trend` runs that layer, there's one per layer, and each has a `portal.healthThreshold`.
 - **The secrets:** the reusable workflow declares exactly `ci.secrets`, and its callers pass them by name (never `secrets: inherit`).

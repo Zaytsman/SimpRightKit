@@ -1,7 +1,7 @@
 // `simpright doctor`: checks that a project's setup is consistent. The scenarios and bugs have their own check
 // (`simpright-scenarios validate`); this one covers the rest:
 // - simpright.yml matches simpright.schema.json (readConfig), and every path it names exists (except
-//   paths.coverageSummary, which a test run generates); a portal (parts.portal) needs runs and a portal section, and
+//   paths.coverageSummary, which a test run generates, and paths.appSource, a checkout CI doesn't have); a portal (parts.portal) needs runs and a portal section, and
 //   its Bugs page needs paths.bugs; portal.titleAccent is the end of portal.title;
 // - the kit's packages that are installed share one version (one kit release);
 // - every run (runs) has exactly one caller of .github/workflows/playwright-run.yml, with the run's id as its
@@ -142,7 +142,7 @@ function checkConfig(config: Config, exists: Exists, fail: Fail): void {
   const configPaths: [string, string][] = [
     ...config.project.conventions.map((file, i): [string, string] => [`project.conventions[${i}]`, file]),
     ...Object.entries(paths)
-      .filter(([key]) => key !== 'coverageSummary')
+      .filter(([key]) => key !== 'coverageSummary' && key !== 'appSource')
       .map(([key, file]): [string, string] => [`paths.${key}`, file]),
     ...Object.entries(config.api?.exemplars ?? {}).map(([key, file]): [string, string] => [`api.exemplars.${key}`, file]),
     ...Object.entries(config.ui?.exemplars ?? {}).map(([key, file]): [string, string] => [`ui.exemplars.${key}`, file]),

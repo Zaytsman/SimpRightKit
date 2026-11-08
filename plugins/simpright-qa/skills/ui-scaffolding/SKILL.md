@@ -1,6 +1,6 @@
 ---
 name: ui-scaffolding
-description: How to add the page objects, components, flows, fixtures and test data a scenario needs. Preloaded into the ui-test-engineer agent.
+description: How to add the page objects, components, flows, fixtures and test data a scenario needs. Preloaded into the simpright-qa:ui-test-engineer agent.
 user-invocable: false
 ---
 
@@ -14,15 +14,15 @@ Add only what the approved plan lists as new, and copy the style of the exemplar
 - **Locators are `private readonly` fields** assigned in the constructor and named with the element kind: `searchInput`, `sortSelect`, `addToCartButton`, `searchCaptionText`, `cartQuantityBadge`, `errorAlert`. Base classes use `protected` for what subclasses need.
 - **A test reaches a locator only through a getter**, added when a test asserts on it, named as the plain noun: `get searchCaption(): Locator { return this.searchCaptionText; }`.
 - **Dynamic locators** are methods with parameters: `card(name)`, `categoryCheckbox(label)`.
-- **Methods:** verbs for actions (`search`, `sortBy`, `addToCart`, `openCart`), async readers for values a test checks (`getProductNames()`, `getPrices()`, `getTotal()`) that return plain values: trimmed text, and amounts read with `parseAmount` (`src/utils/amounts.ts`), which throws on text without digits, so a price that hasn't rendered never reads as 0.
-- **Locator priority:** `getByTestId` (the project's test id attribute) → `getByRole` with a name, `getByLabel`, `getByText` → CSS; never XPath. Ids that end in a record id (`product-01J...`) change when the site re-seeds: match them by prefix (`a[data-test^="product-"]`) or find the element by its visible label.
+- **Methods:** verbs for actions (`search`, `sortBy`, `addToCart`, `openCart`), async readers for values a test checks (`getProductNames()`, `getPrices()`, `getTotal()`) that return plain values: trimmed text, and amounts read with the project's amount parser (the one `ui.rules` names), which should throw on text without digits, so a price that hasn't rendered never reads as 0.
+- **Locator priority:** `getByTestId` (the project's test id attribute) → `getByRole` with a name, `getByLabel`, `getByText` → CSS; never XPath. Ids that end in a record id (`product-01J...`) change when the app's data is reset (see `liveApi.transient`): match them by prefix (an attribute selector on the test-id attribute, such as `a[data-test^="product-"]`) or find the element by its visible label.
 - **No assertions in page objects.** Waiting for the app's own signal inside an action is fine and required (next section).
 - **The toast** (the app's message, role `alert`) is the base page's `toast`; a page doesn't define its own.
 
 ## Waits: every action waits for the app to finish it
 
 An action returns only when the page shows its result, so the next step never reads a half-updated page. And `open()` / `waitForLoaded()` return only when the page has its data, not just its controls: an action started while the page is still loading can be overwritten by the late first load. In order of preference:
-1. **The app's own marker or message:** an element the app renders when done (`search_completed`), a toast ("Product added to shopping cart"), or a container whose `data-test` changes with the state (`sorting_started` → `sorting_completed`). Wait with `expect(marker).toBeVisible()` / `toBeAttached()` inside the action, and make sure the marker can't still be left over from before the action.
+1. **The app's own marker or message:** an element the app renders when done (such as a `results-loaded` marker), a toast ("Item saved"), or a container whose test id changes with the state (`loading` → `loaded`). Wait with `expect(marker).toBeVisible()` / `toBeAttached()` inside the action, and make sure the marker can't still be left over from before the action.
 2. **The request the action triggers:** start waiting before the action, then act, then await it: `const done = waitForApiResponse(this.page, 'GET', '/products'); await this.sortSelect.selectOption({ label }); await done;` (`src/ui/pages/waitForApiResponse.ts`: the method, and the path the URL ends with or a RegExp). Then wait for the re-render if the app shows a loading state.
 3. **A visible change:** the next page's heading, a URL (`waitForURL`), an element that appears or disappears.
 
@@ -47,7 +47,7 @@ Never a fixed sleep (`waitForTimeout`), and never `networkidle` in page objects:
 ## Test data (exemplar: `ui.exemplars.constants`)
 
 - A seeded value that more than one test relies on (a product name, a category) goes in the constants module, in its area group, with a comment saying what makes it useful ("seeded with stock 0"). A value one test uses stays a variable in that test.
-- Data a test needs that the app doesn't have at a fixed place (a customer, a product in the cart, a favourite) is created through the project's API fixtures and step helpers (for example `putProductInCart`, `findProductByName` and `registerCustomerForTest` in `src/ui/fixtures/`, or the API's `registerThrowawayCustomer`), which register their own cleanup; never through the UI unless creating it is what the scenario tests. These helpers are plain functions, never `test.step`s, and throw an error starting with `Setup:` when they can't prepare the state.
+- Data a test needs that the app doesn't have at a fixed place (a customer, a product in the cart, a favourite) is created through the project's API fixtures and step helpers (the profile's `ui.rules` names them), which register their own cleanup; never through the UI unless creating it is what the scenario tests. These helpers are plain functions, never `test.step`s, and throw an error starting with `Setup:` when they can't prepare the state.
 
 ## Keep it small
 

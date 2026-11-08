@@ -9,7 +9,7 @@ Build the list of differences before editing anything.
 **With a spec**, the package computes it:
 
 ```bash
-npx playwright-api-coverage diff <contract folder> <spec file or URL> [--tags Product,User] [--json]
+<the profile's commands.diffContracts, {spec} = the spec file or URL> [--tags Product,User] [--json]
 ```
 
 - It matches endpoints by method and path, ignoring path parameter names (`{id}` = `{productId}`).
@@ -21,7 +21,7 @@ Read the status-code part critically: the contracts were curated (generic codes 
 
 **With source code**, build the same three lists yourself:
 
-1. List the current routes (see from-source.md), and list the contracts' endpoints with `npx playwright-api-coverage validate <contract folder> --json` (`files[].endpoints[].id`).
+1. List the current routes (see from-source.md), and list the contracts' endpoints with the profile's `commands.validateContracts` and `--json` (`files[].endpoints[].id`).
 2. Match them by method and path, ignoring parameter names.
 3. For endpoints on both sides, compare the validation rules, handler errors and auth with the contract.
 

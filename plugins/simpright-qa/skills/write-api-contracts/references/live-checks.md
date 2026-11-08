@@ -24,14 +24,14 @@ Only when the brief gives a base URL **and** says live checks are allowed. The b
 
 ## How to call
 
-Call the API **the way the project's tests do**: read the project's HTTP client (base URL, default headers such as `Accept` and `Content-Type`, how the token is sent) and send the same headers. Some behaviour depends on them. Toolshop, for example, answers a `415` with a JSON body when `Accept: application/json` is sent, and with an HTML page when it isn't. When a response is rendered by the framework rather than the API's own code, check it both ways and document the difference.
+Call the API **the way the project's tests do**: read the project's HTTP client (base URL, default headers such as `Accept` and `Content-Type`, how the token is sent) and send the same headers. Some behaviour depends on them. An API can, for example, answer a `415` with a JSON body when `Accept: application/json` is sent, and with an HTML page when it isn't. When a response is rendered by the framework rather than the API's own code, check it both ways and document the difference.
 
 Use `curl` through Bash (`$TMP` below is your temp folder). Save the body to a file and print the status, the body's shape (never its values), and only the response headers a contract documents:
 
 ```bash
 curl -s -o "$TMP/body.json" -D "$TMP/headers.txt" -w "%{http_code}\n" \
   -H "Accept: application/json" "$BASE_URL/products/00000000000000000000000000"
-node .claude/skills/write-api-contracts/scripts/shape.js "$TMP/body.json"
+node "<the shape script from your instructions>" "$TMP/body.json"
 grep -iE "^(content-type|allow|cache-control|etag|accept-query|retry-after|location):" "$TMP/headers.txt"
 ```
 

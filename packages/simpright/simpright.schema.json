@@ -51,7 +51,8 @@
         "analysis": { "$ref": "#/definitions/path", "description": "Analysis documents with test plans, one per work item, written by the requirements analyst." },
         "testData": { "$ref": "#/definitions/path", "description": "Test data: shared constants and factories." },
         "wiki": { "$ref": "#/definitions/path", "description": "The wiki's pages (parts.wiki): published to the repository's GitHub wiki." },
-        "coverageSummary": { "$ref": "#/definitions/path", "description": "API coverage summary; generated, so it may not exist." }
+        "coverageSummary": { "$ref": "#/definitions/path", "description": "API coverage summary; generated, so it may not exist." },
+        "appSource": { "$ref": "#/definitions/path", "description": "The app under test's source code: a checkout next to the project, such as ../app. The agents read it there (read-only) and don't look for it elsewhere on the disk; doctor doesn't require it, since CI has no checkout." }
       }
     },
     "commands": {

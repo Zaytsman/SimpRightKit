@@ -251,6 +251,11 @@ describe('simpright doctor', () => {
     assert.deepEqual(result.problems, []);
   });
 
+  it("doesn't require paths.appSource to exist: CI has no checkout of the app", async () => {
+    const result = await check((p) => p.edit('simpright.yml', '  pages: src/app/pages\n', '  pages: src/app/pages\n  appSource: ../sample-app\n'));
+    assert.deepEqual(result.problems, []);
+  });
+
   it("skips imports in comments and doesn't scan the core's documents", async () => {
     const result = await check((p) => {
       p.edit('src/core/base.ts', "import { label } from './helpers';", "import { label } from './helpers';\n// import { shopName } from '../app/index';\n/* import { homePath } from '../app/pages/homePage'; */");

@@ -29,5 +29,5 @@ Proof that the server decides: an endpoint in a contract with that rule (a 422 f
 - **Split, don't duplicate.** A rule the server enforces and the page displays is two items: the API item proves the rule with every case and boundary; the UI item checks one case to show the user sees the result. Never repeat the boundaries on the UI.
 - **Bugs** are reproduced on the lowest layer where they show. A bug that shows in the API response is an API item even when it was reported from the UI.
 - **Data setup is never a reason for the UI.** A UI item that needs a record (a product in the cart, a favourite) gets it through the API; the scenario only says what is needed.
-- **Unknown endpoint.** When the API layer is right but no contract documents the endpoint, the item stays API with a `contract gap` flag: run `/write-api-contracts` for that area first, or move the item to the UI with that reason, as the user chooses.
+- **Unknown endpoint.** When the API layer is right but no contract documents the endpoint, the item stays API with a `contract gap` flag: run `/simpright-qa:write-api-contracts` for that area first, or move the item to the UI with that reason, as the user chooses.
 - **When in doubt**, choose the API and put the choice under "Decisions needed".

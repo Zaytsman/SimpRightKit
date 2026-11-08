@@ -8,8 +8,9 @@ The installable parts of [SimpRight](https://github.com/Zaytsman/SimpRight), a T
 | [`@simpright/scenarios`](packages/scenarios) | Test scenarios and bugs as YAML files: their schemas, and checks that keep them and the Playwright specs in sync. | `simpright-scenarios validate`, `simpright-scenarios check-step-titles` |
 | [`@simpright/portal`](packages/portal) | A static dashboard for Playwright runs (run history, trends, known issues) with Test Cases and Bugs pages, published into any folder, such as a `gh-pages` branch. | `simpright-portal publish-run`, `simpright-portal build-pages` |
 | [The CI actions](actions) | GitHub Actions composite actions: install, run the tests, publish the run and the pages to GitHub Pages, squash the `gh-pages` history, publish a wiki. `simpright apply` writes the workflows that use them. | `uses: Zaytsman/SimpRightKit/actions/<name>@<commit>` |
+| [`simpright-qa`](plugins/simpright-qa) | A Claude Code plugin with the QA agents and skills: analyse a story, write API contracts and test scenarios, automate them, review and heal the tests, record bugs. In the kit's marketplace, `simpright-kit`. | `/simpright-qa:implement-ui-scenarios`, ... |
 
-The packages and the actions share one version (one kit release). The packages need Node.js 22 or later, and everything reads the project's `simpright.yml`.
+The packages, the actions and the plugin share one version (one kit release). The packages need Node.js 22 or later, and everything reads the project's `simpright.yml`.
 
 ## Quick start
 

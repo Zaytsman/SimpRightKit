@@ -1,6 +1,6 @@
 # How to ask
 
-Shared by the QA skills (`/analyze-requirements`, `/write-api-scenarios-from-contract`, `/write-*-scenarios-from-steps`, `/implement-*-scenarios`, `/review-tests`, `/heal-tests`, `/report-bug`, `/write-api-contracts`). Each skill reads this file before its first question and says which questions it asks at its checkpoints; these rules say how, so a skill doesn't repeat them.
+Shared by the QA skills (`/simpright-qa:analyze-requirements`, `/simpright-qa:write-api-scenarios-from-contract`, `/simpright-qa:write-*-scenarios-from-steps`, `/simpright-qa:implement-*-scenarios`, `/simpright-qa:review-tests`, `/simpright-qa:heal-tests`, `/simpright-qa:report-bug`, `/simpright-qa:write-api-contracts`). Each skill reads this file before its first question and says which questions it asks at its checkpoints; these rules say how, so a skill doesn't repeat them.
 
 Every question to the user goes through the AskUserQuestion tool:
 - Show what the question is about (the plan, the proposal, the findings, the diagnosis, the failures) as text first, as the agent returned it; the question itself stays short.

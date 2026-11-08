@@ -1,6 +1,6 @@
 ---
 name: api-scaffolding
-description: How to add the clients, services, DTOs, fixtures and test data a scenario needs. Preloaded into the api-test-engineer agent.
+description: How to add the clients, services, DTOs, fixtures and test data a scenario needs. Preloaded into the simpright-qa:api-test-engineer agent.
 user-invocable: false
 ---
 

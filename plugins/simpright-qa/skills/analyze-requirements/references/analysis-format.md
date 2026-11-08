@@ -1,11 +1,11 @@
 # Analysis document format
 
-One markdown file per work item in the profile's `paths.analysis` folder, written by the `requirements-analyst` agent from the approved analysis. Keep it short: a reader should understand the work item and its tests in two minutes. Leave out sections that would be empty, except "Test plan".
+One markdown file per work item in the profile's `paths.analysis` folder, written by the `simpright-qa:requirements-analyst` agent from the approved analysis. Keep it short: a reader should understand the work item and its tests in two minutes. Leave out sections that would be empty, except "Test plan".
 
 ````md
 # <Work item title>
 
-<!-- Written by the requirements-analyst agent (/analyze-requirements). Source: <path or "pasted text"> -->
+<!-- Written by the simpright-qa:requirements-analyst agent (/simpright-qa:analyze-requirements). Source: <path or "pasted text"> -->
 
 | | |
 |---|---|

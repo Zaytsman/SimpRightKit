@@ -1,6 +1,6 @@
 ---
 name: api-test-from-scenario
-description: How to write an API test spec from a scenario file. Preloaded into the api-test-engineer agent.
+description: How to write an API test spec from a scenario file. Preloaded into the simpright-qa:api-test-engineer agent.
 user-invocable: false
 ---
 
@@ -20,7 +20,7 @@ Copy the structure of the exemplar spec (`api.exemplars.spec` in the profile) an
 - One `test('<ID>: <name>')` per scenario, with the name verbatim (escape quotes the way the exemplar does). (checked)
 - A scenario with `role` runs as that role: when every scenario in the file has the same role, set it once with `test.use({ role })` inside the describe; otherwise wrap that one test in an anonymous `test.describe(() => { test.use({ role: '<role>' }); test(...) })`.
 - A scenario with `tags` (`["@smoke"]`): the test gets Playwright's tag option and keeps its title: `test('<ID>: <name>', { tag: '@smoke' }, async (...) => ...)`. A smoke test only makes writes it cleans up itself.
-- A scenario with `knownIssue`: the profile's `api.knownIssue` snippet with the scenario's `bug` ID and the text verbatim goes right before the test's first `test.step`, after any setup code in the body (setup helpers such as `createBrand` or `registerThrowawayCustomer`), so a failed setup is a real failure, not "bug still present". With no setup it's the first line.
+- A scenario with `knownIssue`: the profile's `api.knownIssue` snippet with the scenario's `bug` ID and the text verbatim goes right before the test's first `test.step`, after any setup code in the body (setup helpers that create a record or a throwaway user), so a failed setup is a real failure, not "bug still present". With no setup it's the first line.
 - Tests in a file run in parallel and each file runs on its own: no state shared between tests, no order between them.
 - State shared between steps goes in `let` variables at the top of the test; values only this test uses are `const`s there too.
 - **Reuse first:** before writing a helper, look in the shared checks (`api.exemplars.checks`), the step helpers (`api.exemplars.steps`) and the area's `*Steps.ts`; a spec never redefines one. Tests whose bodies differ only in their data go through one template function that takes the step titles and the data (shared ones: `checkStatusAndMessage`, `checkRejectedBody`, `checkValidationRedirect`), called from a literal `test('<ID>: <name>', ...)` per scenario. Never generate tests in a loop: the validator finds titles only in literal calls.
@@ -49,3 +49,4 @@ One `test.step('<step text verbatim>', ...)` per scenario step, in order.
 - **Parsing:** parse a body only after checking its status; a failed request may return HTML or an empty body.
 - **Status codes:** compare with `toBe(<code>)`; don't accept a range unless the scenario does.
 - **Time:** wait for a condition the API exposes, never a fixed sleep.
+- **Test timeouts:** a timeout abandons the test body, so `finally` blocks and later attachments don't run. A polling loop stays well inside the test's timeout.

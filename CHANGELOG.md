@@ -2,6 +2,21 @@
 
 The kit's packages share one version; each release lists what changed in each of them.
 
+## 0.3.0 (unreleased)
+
+The agents part: SimpRight's QA agents and skills as a Claude Code plugin, in the kit's own marketplace.
+
+- **The `simpright-qa` plugin** (`plugins/simpright-qa`, marketplace `simpright-kit` in `.claude-plugin/marketplace.json`): SimpRight's 9 agents and 14 skills, moved from its `.claude/`. Compared with them:
+  - the commands and agents carry the plugin's prefix (`/simpright-qa:implement-ui-scenarios`, `simpright-qa:ui-test-engineer`), and the texts name each other that way;
+  - bundled files are found through `${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_SKILL_DIR}`, and `how-to-ask.md` moved to `shared/`;
+  - no SimpRight or Toolshop facts: what the agents need to know about an app comes from `simpright.yml` (`liveApi`, the exemplars and rules);
+  - the agents start without CLAUDE.md, CLAUDE.local.md and memory (`omitClaudeMd`), and read the files in `project.conventions` themselves;
+  - the scenario writers' "From steps" rules are a reference that the from-steps skills pass, so the writers are smaller in their other modes;
+  - the agents read the app's source only at `paths.appSource`, and search the project with `git grep` or in the profile's folders, so git-ignored private files (a local `.claude/` folder) stay out of their searches;
+  - the reviewer's UI checklist names the conventions' secret-typing rule (`fillSecret`), and the two from-steps skills have shorter descriptions, so the skill listing keeps them.
+- **`paths.appSource`** (simpright): optional, the app under test's source checkout, relative to the repository root (such as `../app`). `doctor` doesn't require it to exist, since CI has no checkout.
+- **The kit's checks:** `npm run validate:plugins` runs `claude plugin validate --strict` on the marketplace and each plugin (in the `ci` job, with the Claude Code CLI as a devDependency), and `test/plugin.test.ts` checks the plugins' names, paths, agent and skill fields, and the `simpright.yml` keys their texts name. `release.ts` sets the plugins' version with the packages'.
+
 ## 0.2.1 (2026-11-01)
 
 - **The actions:** `publish-wiki` compares the pages by content (`rsync --checksum`, in its new `sync-pages.sh`). It could leave a changed page out of the wiki when the change kept the page's size and the checkout and the wiki's clone ran in the same second, as they often do: rsync's quick check took the page for unchanged. The e2e workflow checks that case.

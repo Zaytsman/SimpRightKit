@@ -1,18 +1,18 @@
 ---
 name: write-api-scenarios-from-contract
-description: Propose and write API test scenarios (YAML files in the project's scenario folder) from an API contract document, with a checkpoint where the user approves the proposal before any file is written. Use when the user asks to write, propose or fill gaps in API test scenarios for an API area or contract, e.g. "/write-api-scenarios-from-contract Products_API.md". For test steps, requests or a Bruno collection, use write-api-scenarios-from-steps.
+description: Propose and write API test scenarios (YAML files in the project's scenario folder) from an API contract document, with a checkpoint where the user approves the proposal before any file is written. Use when the user asks to write, propose or fill gaps in API test scenarios for an API area or contract, e.g. "/simpright-qa:write-api-scenarios-from-contract Products_API.md". For test steps, requests or a Bruno collection, use /simpright-qa:write-api-scenarios-from-steps.
 argument-hint: "<contract document> [endpoint ...]"
 ---
 
 # Write API scenarios from a contract
 
-The work is done by the `api-scenario-writer` subagent, in two phases: a proposal, then the files. Your part: settle the brief, run the proposal, get the user's approval, run the writing, then check and report. A subagent can't ask the user anything, so the checkpoint happens here.
+The work is done by the `simpright-qa:api-scenario-writer` subagent, in two phases: a proposal, then the files. Your part: settle the brief, run the proposal, get the user's approval, run the writing, then check and report. A subagent can't ask the user anything, so the checkpoint happens here.
 
 Arguments, if any: $ARGUMENTS
 
 ## How to ask
 
-Before the first question, read `../_shared/how-to-ask.md` (next to this skill's folder) and follow it for every question in this skill.
+Before the first question, read `${CLAUDE_PLUGIN_ROOT}/shared/how-to-ask.md` and follow it for every question in this skill.
 
 ## 1. Settle the brief
 
@@ -23,7 +23,7 @@ Before the first question, read `../_shared/how-to-ask.md` (next to this skill's
 
 ## 2. Proposal
 
-Start the `api-scenario-writer` subagent with a brief that stands on its own (it can't see this conversation):
+Start the `simpright-qa:api-scenario-writer` subagent with a brief that stands on its own (it can't see this conversation):
 
 ```
 Profile: <absolute path of simpright.yml>
@@ -50,12 +50,12 @@ Phase: write
 Approved, with these edits: <the user's edits and decisions, or "none">
 ```
 
-If the agent can't be continued, start a new `api-scenario-writer` with the brief from step 2, `Phase: write`, and the approved proposal pasted in full, followed by the edits.
+If the agent can't be continued, start a new `simpright-qa:api-scenario-writer` with the brief from step 2, `Phase: write`, and the approved proposal pasted in full, followed by the edits.
 
 ## 4. Check and report
 
 1. Run the profile's `commands.validateScenarios` yourself and confirm it passes.
 2. Tell the user briefly: the files created and extended with their IDs, the validator result, the flagged scenarios (writes, dangerous, known issues, unconfirmed), any ID renumbering, and what the agent noticed but didn't change.
-3. Suggest the next step: review the diff of the scenario folder, then implement the scenarios with `/implement-api-scenarios <file or IDs>`.
+3. Suggest the next step: review the diff of the scenario folder, then implement the scenarios with `/simpright-qa:implement-api-scenarios <file or IDs>`.
 
 Don't commit anything unless the user asks.

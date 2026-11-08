@@ -1,6 +1,6 @@
 ---
 name: ui-test-from-scenario
-description: How to write a UI test spec from a scenario file. Preloaded into the ui-test-engineer agent.
+description: How to write a UI test spec from a scenario file. Preloaded into the simpright-qa:ui-test-engineer agent.
 user-invocable: false
 ---
 
@@ -23,8 +23,8 @@ Copy the structure of the exemplar spec (`ui.exemplars.spec` in the profile) and
 - A scenario with `knownIssue`: the profile's `ui.knownIssue` snippet with the scenario's `bug` ID and the text verbatim goes right before the test's first `test.step`, after any setup code in the body (`// Precondition:` code, carts put through the API), so a failed setup is a real failure, not "bug still present". With no setup (or setup in a precondition fixture) it's the first line.
 - Tests in a file run in parallel and each file runs on its own: no state shared between tests, no order between them.
 - State shared between steps goes in `let` variables at the top of the test; values only this test uses are `const`s there too (from the constants module when shared).
-- **Preconditions** (the scenario's `preconditions`): each precondition is set up before the first step, never in a `test.step`: with a precondition fixture (`openHomePageTest`, `openHomePageInLondonTest`, `openProductPageTest`, `openProductPageInLondonTest`, `openProductPageWithNewCustomerTest`) when the tests share it, imported as `test` (`import { openHomePageTest as test, expect } from '@fixtures'`) so the validator finds the titles; otherwise as setup code at the top of the test with a `// Precondition: <text>` comment. A precondition fixture that exists for the text ("The home page is open." → `openHomePageTest`, "The product page of "X" is open." → `openProductPageTest` with `test.use({ productName })`) is always used; when tests in the file have different preconditions, wrap the ones that share a fixture in an anonymous `test.describe(() => { const test = <fixture>; ... })`.
-- **Setup** (the preconditions and the data they need: `putProductInCart`, `findProductByName`, `registerCustomerForTest`) is code before the first step, never a `test.step`; when it can't prepare the state it throws an error starting with `Setup:`. The checkout is opened with `cartPage.open()`, never by loading `/checkout`.
+- **Preconditions** (the scenario's `preconditions`): each precondition is set up before the first step, never in a `test.step`: with a precondition fixture (`open<Page><State>Test`, like `ui.exemplars.preconditionFixture`; the fixtures index, `ui.exemplars.fixturesIndex`, exports them all) when the tests share it, imported as `test` (`import { openHomePageTest as test, expect } from '@fixtures'`) so the validator finds the titles; otherwise as setup code at the top of the test with a `// Precondition: <text>` comment. A precondition fixture that exists for the text ("The home page is open." → `openHomePageTest`, "The product page of "X" is open." → `openProductPageTest` with `test.use({ productName })`) is always used; when tests in the file have different preconditions, wrap the ones that share a fixture in an anonymous `test.describe(() => { const test = <fixture>; ... })`.
+- **Setup** (the preconditions and the data they need, through the helpers `ui.rules` names) is code before the first step, never a `test.step`; when it can't prepare the state it throws an error starting with `Setup:`.
 
 ## Steps
 
@@ -49,7 +49,8 @@ One `test.step('<step text verbatim>', ...)` per scenario step, in order.
 
 ## Things that bite
 
-- **Re-seeding:** the demo site re-seeds every hour, which changes record ids: never use ids in specs; find records by visible names. A run that starts right on the hour may fail in setup; that's the site, not the test.
+- **Changing data:** record ids can change (the profile's `liveApi.transient` says when, such as a periodic data reset): never use ids in specs; find records by visible names. A run that starts inside one of those windows may fail in setup; that's the app, not the test.
 - **Re-renders:** a list that re-renders after an action can be read half-updated; the action must wait for its signal (marker, response, change) before the spec reads.
 - **Hidden duplicates:** responsive layouts may render an element twice (one hidden); scope locators to the visible one or to a container.
 - **Time:** wait for a condition the page exposes, never a fixed sleep.
+- **Test timeouts:** a timeout abandons the test body, so `finally` blocks and later attachments don't run. A polling loop stays well inside the test's timeout.

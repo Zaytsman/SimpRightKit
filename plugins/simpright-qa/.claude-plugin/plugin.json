@@ -1,0 +1,19 @@
+{
+  "name": "simpright-qa",
+  "displayName": "SimpRight QA",
+  "version": "0.2.1",
+  "description": "QA agents and skills for SimpRight Kit projects (Playwright + TypeScript): analyse a story, write API contracts and test scenarios, automate them, review and heal the tests, record bugs.",
+  "author": {
+    "name": "Andrii Zaitsev"
+  },
+  "homepage": "https://github.com/Zaytsman/SimpRightKit/tree/main/plugins/simpright-qa#readme",
+  "repository": "https://github.com/Zaytsman/SimpRightKit",
+  "license": "MIT",
+  "keywords": [
+    "simpright",
+    "playwright",
+    "test-automation",
+    "qa",
+    "agents"
+  ]
+}

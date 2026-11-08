@@ -19,7 +19,7 @@ On top of `common.md`. The rules are in the conventions files (the framework's "
 - A status check also checks the body the scenario names (the error message, the field errors); a status alone where the step names a message is a weakened check.
 - Records the test creates are removed with `cleanup.add(...)`, registered right after the create succeeds, not in `afterAll` or at the end of the test.
 - Create and update payloads come from the area's factory, with `uniqueName` for every created record; no hand-written payload objects repeated across tests.
-- A user-changing test uses a throwaway customer (`registerThrowawayCustomer` or the factory), never a shared user or the admin.
+- A user-changing test uses a throwaway user (the project's helper or factory for one, see `api.rules`), never a shared test user or the admin.
 - A list check that filters by a field (brand, category) is safe next to the write specs: test-created records can appear in it (see `PRODUCT_NAME_PREFIX` in the factory).
 
 ## Clients, services, DTOs

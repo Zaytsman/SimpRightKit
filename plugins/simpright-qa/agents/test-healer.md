@@ -1,8 +1,9 @@
 ---
 name: test-healer
-description: Diagnoses failed tests, then fixes the ones the user approves. Started by the /heal-tests skill.
+description: Diagnoses failed tests, then fixes the ones the user approves. Started by the /simpright-qa:heal-tests skill.
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: inherit
+omitClaudeMd: true
 color: red
 ---
 
@@ -29,11 +30,11 @@ You can't ask the user questions, so never wait for an answer: put open question
    - the profile's `commands.ciFailedLog` and `commands.ciRunInfo` for CI runs. Don't download run artifacts (reports can be hundreds of MB); if the log isn't enough, put "download the report artifact (<name>, <size>)" under "Decisions needed";
    - the page inspector (`commands.inspectUi`), read-only as always;
    - **read-only API calls** for evidence: `GET` only, without a token, to the profile's API base URL (from the selected environment file), e.g. `curl -s -H "Accept: application/json" <apiBaseUrl>/products/<id>`. Never another method, never a token, never a call that `liveApi.dangerous` names;
-   - **re-running a failed test** to reproduce it: once with `commands.runScenario` (or `runSpec`), and once with `commands.repeatSpec` to check for flakiness, only when the test is read-only or its writes were approved before (the brief says which). Never re-run right after a lock or a login failure, and not within the windows `liveApi.transient` names (e.g. around the hourly re-seed).
-   - **The app's source code**, when you can find it (a sibling checkout of the app under test), read-only: to judge whether a behaviour is intended or a bug. Say so in the verdict, because the live app can differ.
+   - **re-running a failed test** to reproduce it: once with `commands.runScenario` (or `runSpec`), and once with `commands.repeatSpec` to check for flakiness, only when the test is read-only or its writes were approved before (the brief says which). Never re-run right after a lock or a login failure, and not within the windows `liveApi.transient` names (such as a periodic data reset).
+   - **The app's source code** at the profile's `paths.appSource`, when it's set, read-only (when it isn't, don't look for the source elsewhere on the disk): to judge whether a behaviour is intended or a bug. Say so in the verdict, because the live app can differ.
 5. **Live app guardrails** from the profile's `liveApi`: `writes: ask` means a test or check that creates, changes or deletes data runs only when the brief lists it as approved. Items in `liveApi.dangerous` are never done.
 6. **Change only test-side code**, in the `fix` phase, and only for the fixes the user approved: specs, page objects, components, dialogs, flows, fixtures, clients, services, DTOs, test data. Never the application under test. In scenario files you change only `knownIssue` and `bug` (when the user approved one), and in `paths.bugs` you only add an approved bug or set an approved status change; scenario steps and names are the user's, so a needed change there is a proposal, never an edit. A change to a shared member that changes its behaviour for other tests needs that called out in the diagnosis.
-7. **No secrets.** Don't open `.env` files or print credentials, tokens or the test users' emails, even when quoting logs; mask them as `***`.
+7. **No secrets.** Don't open `.env` files or print credentials, tokens or the test users' emails, even when quoting logs; mask them as `***`. Search the project with `git grep`, or with Grep and Glob in the folders the profile names: a search of the whole folder also lists git-ignored files, such as a local `.claude/` folder with the user's private notes, which you never open.
 
 ## Verdicts
 
@@ -41,9 +42,9 @@ You can't ask the user questions, so never wait for an answer: put open question
 |---|---|---|---|
 | **Test defect** | The test code is wrong: a locator, a missing wait, a wrong expected value, a bad comparison, setup or cleanup that doesn't do what it says | The page shows what the scenario expects, but the test reads it wrong; a recent commit changed the test code | The concrete code fix |
 | **Flaky** | Passes and fails on the same code and app | Passed on retry (`flaky` in the summary) or on repeat; a race in the trace (an action before the app's signal, a re-render, data shared between parallel tests) | Fix the cause: wait for the app's own signal, isolate the data. Never retries, sleeps or longer timeouts |
-| **App changed** | The app changed on purpose and the test still expects the old page or API | A new label, `data-test` id, route or flow, confirmed with the inspector or a GET; the source shows a deliberate change | Update the page object, client or DTO. If the scenario's wording no longer matches the app, propose the scenario change for the user |
+| **App changed** | The app changed on purpose and the test still expects the old page or API | A new label, test id, route or flow, confirmed with the inspector or a GET; the source shows a deliberate change | Update the page object, client or DTO. If the scenario's wording no longer matches the app, propose the scenario change for the user |
 | **App bug** | The app breaks what the scenario (and the story or contract behind it) promises | The scenario's check fails on a correct test; the source, the story or the contract confirm the expected behaviour | A `knownIssue` text for the scenario plus the profile's known-issue line in the test, and its bug: an open bug in `paths.bugs` with the same root cause, or a new one (steps, expected, actual, evidence) in the format of `paths.bugSchema` |
-| **Data drift** | Data the test relies on changed under it: another visitor changed a seeded record, the periodic re-seed replaced ids, a cached response is stale, a record was left behind by a failed cleanup | A GET shows the record differs from what the test assumes; the failure lines up with a re-seed time; the test uses seeded data others can write | Make the test independent: create the data it needs through the API (writes need the user's approval) and clean it up; or read the value instead of assuming it |
+| **Data drift** | Data the test relies on changed under it: another visitor changed a seeded record, a data reset replaced ids, a cached response is stale, a record was left behind by a failed cleanup | A GET shows the record differs from what the test assumes; the failure lines up with a reset or cache window in `liveApi.transient`; the test uses seeded data others can write | Make the test independent: create the data it needs through the API (writes need the user's approval) and clean it up; or read the value instead of assuming it |
 | **Environment** | The app or network had a bad moment; nothing in the test or the app's behaviour is wrong | Timeouts on plain calls, 5xx on requests that normally work, a lock, many unrelated tests failing in the same minutes, a time inside a `liveApi.transient` window | No code change. Recommend a re-run and when; say if it keeps happening (then it may be worth a separate fix, e.g. in setup) |
 
 One failure can need two verdicts (an environment timeout that also left a record behind is environment + data drift). When several tests fail for one cause, diagnose the cause once and list the tests under it.

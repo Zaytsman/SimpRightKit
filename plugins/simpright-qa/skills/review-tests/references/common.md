@@ -4,7 +4,7 @@ The conventions themselves are in the files under the profile's `project.convent
 
 ## 1. The test matches its scenario
 
-- Every scenario step has its own `test.step`, titled with the step text verbatim, in the scenario's order. None dropped, merged or split. After a run, `npm run check:step-titles -- <JSON report>` compares them (titles passed to a template are only visible there).
+- Every scenario step has its own `test.step`, titled with the step text verbatim, in the scenario's order. None dropped, merged or split. After a run, `npx --no-install simpright-scenarios check-step-titles <JSON report>` compares them (titles passed to a template are only visible there).
 - An action step does what it says, and only that (it may read values for later checks). A `Verify` step checks and never changes data.
 - **A `Verify` step checks what it says, completely.** Compare the step's words with the assertion:
   - The step names a value ("the price \"$14.15\"", "with quantity 2") → the assertion compares that value, not only visibility or existence.
@@ -13,7 +13,7 @@ The conventions themselves are in the files under the profile's `project.convent
   - A negative step ("is not shown") → asserted in a way that can fail: `toHaveCount(0)` or `not.toBeVisible()` on a locator that would match the element if it appeared, not on a locator that can never match.
 - A step the code does as setup (a fixture, `beforeEach`) is not also a scenario step, and a scenario step isn't hidden in a fixture.
 - `// Approved reading:` comments: the code does what the comment says.
-- Smoke: a test tagged `@smoke` is a happy path with no known issue, cleans up every record it creates (`cleanup`, throwaway customers), and has no fixed waits or reads of shared totals that could flake.
+- Smoke: a test tagged `@smoke` is a happy path with no known issue, cleans up every record it creates (`cleanup`, throwaway users), and has no fixed waits or reads of shared totals that could flake.
 - Known issues: the scenario's `knownIssue` and `bug` and the test's known-issue line agree (the profile's `knownIssue` snippet, same bug ID and text); the line sits right before the first `test.step`, with no setup code (an `await` outside a step) after it, because a setup failure after it passes as "bug still present"; the bug is open and has the same root cause as the scenario's failure; no `test.fail` without a `knownIssue`, and no `test.skip`/`test.fixme` left in.
 - The test uses the scenario's `role` (`test.use({ role })`; `guest` → `authMode: 'none'`).
 
@@ -31,14 +31,14 @@ The conventions themselves are in the files under the profile's `project.convent
 
 - No fixed sleeps (`waitForTimeout`), no longer timeouts or `retries` added as a fix.
 - Every action waits for the app's own signal before the next step relies on its result (a marker, a toast, a URL, a response). Look for an action followed directly by a read.
-- Data shared between parallel tests: a test that changes a shared record (a seeded product, the run's customer's cart or favourites) can break another test reading it. Each spec file must pass alone and next to the others.
-- The demo site re-seeds every hour: record ids (ULIDs) change, so a hard-coded id breaks; names and seeded values stay.
+- Data shared between parallel tests: a test that changes a shared record (a seeded product, a shared test user's cart or favourites) can break another test reading it. Each spec file must pass alone and next to the others.
+- Record ids can change under the tests (the profile's `liveApi.transient` says when, such as a periodic data reset), so a hard-coded id breaks; find records by their names and seeded values.
 - Order inside a list the app doesn't promise to keep (search results, related products) isn't asserted unless the scenario says so.
 - Test-created records use `uniqueName` (so parallel runs don't collide) and are removed with `cleanup`.
 
 ## 4. Test data
 
-- A seeded value (a product name, a category, a price) that **more than one test** uses goes in the constants module (`TestConstants`); a value one test uses stays a variable in that test (conventions "Layout"). Count the uses across all specs, not only the change.
+- A seeded value (a product name, a category, a price) that **more than one test** uses goes in the constants module (the profile's `api.exemplars.constants` or `ui.exemplars.constants`); a value one test uses stays a variable in that test (conventions "Layout"). Count the uses across all specs, not only the change.
 - No secret values in steps, code, messages or test titles. Users come from fixtures and roles.
 - No magic values without a source: an expected price or count that isn't in the scenario or the constants needs a comment saying where it comes from.
 
