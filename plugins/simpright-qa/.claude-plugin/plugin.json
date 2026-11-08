@@ -1,7 +1,7 @@
 {
   "name": "simpright-qa",
   "displayName": "SimpRight QA",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "QA agents and skills for SimpRight Kit projects (Playwright + TypeScript): analyse a story, write API contracts and test scenarios, automate them, review and heal the tests, record bugs.",
   "author": {
     "name": "Andrii Zaitsev"
