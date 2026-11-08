@@ -36,29 +36,30 @@ ids:
 
 roles: [default, guest]
 
-api:
-  exemplars:
-    client: src/app/productsClient.ts
-    service: src/app/productsClient.ts
-    dto: src/app/productsClient.ts
-    fixtures: src/app/index.ts
-    spec: tests/api/products/get-products.spec.ts
-  knownIssue: "test.fail(true, 'Known issue {bug}: {text}');"
-  rules:
-    - Every assertion carries a message.
-
-ui:
-  exemplars:
-    page: src/app/pages/homePage.ts
-    component: src/app/pages/homePage.ts
-    fixtures: src/app/index.ts
-    spec: tests/ui/products/product-search.spec.ts
-  knownIssue: "test.fail(true, 'Known issue {bug}: {text}');"
-  rules:
-    - Every assertion carries a message.
-
-liveApi:
-  writes: never
+# The QA agents' facts. The sample keeps the agents part off (no parts.agents), so apply writes no
+# .claude/settings.json for it; the kit's tests turn it on where they need it.
+agents:
+  api:
+    exemplars:
+      client: src/app/productsClient.ts
+      service: src/app/productsClient.ts
+      dto: src/app/productsClient.ts
+      fixtures: src/app/index.ts
+      spec: tests/api/products/get-products.spec.ts
+    knownIssue: "test.fail(true, 'Known issue {bug}: {text}');"
+    rules:
+      - Every assertion carries a message.
+  ui:
+    exemplars:
+      page: src/app/pages/homePage.ts
+      component: src/app/pages/homePage.ts
+      fixtures: src/app/index.ts
+      spec: tests/ui/products/product-search.spec.ts
+    knownIssue: "test.fail(true, 'Known issue {bug}: {text}');"
+    rules:
+      - Every assertion carries a message.
+  liveApi:
+    writes: never
 
 parts:
   scenarios: true

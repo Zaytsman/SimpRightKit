@@ -116,6 +116,11 @@ jobs:
       - name: Check the packages' files
         run: npm run check:packages
 
+      # Claude Code's own checks of the marketplace and the plugins, with warnings as errors. The CLI is a devDependency
+      # whose wrapper runs its native binary, so it works without install scripts.
+      - name: Validate the plugins
+        run: npm run validate:plugins
+
       # @simpright/portal ships the sample site (preview --sample): it must be what the sample project builds now.
       - name: Check the package's sample site
         run: |

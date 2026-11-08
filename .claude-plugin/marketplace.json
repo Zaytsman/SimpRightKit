@@ -1,0 +1,12 @@
+{
+  "name": "simpright-kit",
+  "owner": { "name": "Andrii Zaitsev", "url": "https://github.com/Zaytsman" },
+  "description": "The SimpRight Kit's Claude Code plugins, for projects built on the kit.",
+  "plugins": [
+    {
+      "name": "simpright-qa",
+      "source": "./plugins/simpright-qa",
+      "description": "QA agents and skills: analyse a story, write API contracts and test scenarios, automate them, review and heal the tests, record bugs."
+    }
+  ]
+}

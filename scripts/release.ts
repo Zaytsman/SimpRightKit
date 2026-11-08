@@ -1,10 +1,10 @@
-// Prepares a kit release: one version in every package, the packages' pins on each other, the lockfiles (the kit's and
+// Prepares a kit release: one version in every package and plugin, the packages' pins on each other, the lockfiles (the kit's and
 // the sample project's), and the date of the CHANGELOG's entry. It changes files only; committing, tagging and pushing stay explicit steps (CONTRIBUTING.md).
 // Run with `npm run release -- <version>`, e.g. `npm run release -- 0.2.0`. CHANGELOG.md must have a
 // "## <version> (unreleased)" entry.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,6 +42,14 @@ for (const { file, json } of manifests) {
   }
   writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`);
 }
+// The plugins carry the kit version too: a project pins one kit release for its packages, actions and plugins.
+const plugins = readdirSync(path.join(KIT, 'plugins'));
+for (const plugin of plugins) {
+  const file = path.join(KIT, 'plugins', plugin, '.claude-plugin', 'plugin.json');
+  const json = JSON.parse(readFileSync(file, 'utf8')) as { version?: string };
+  json.version = version;
+  writeFileSync(file, `${JSON.stringify(json, null, 2)}\n`);
+}
 const today = new Date().toISOString().slice(0, 10);
 writeFileSync(changelogFile, changelog.replace(unreleased, `## ${version} (${today})`));
 
@@ -53,7 +61,7 @@ for (const cwd of [KIT, path.join(KIT, 'examples/sample-project')]) {
   execFileSync(process.execPath, [npmCli, 'install', '--package-lock-only', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd, stdio: 'inherit' });
 }
 
-console.log(`Set ${[...names].join(', ')} to ${version}, and the CHANGELOG entry to ${today}. Next (CONTRIBUTING.md):
+console.log(`Set ${[...names, ...plugins.map((plugin) => `the ${plugin} plugin`)].join(', ')} to ${version}, and the CHANGELOG entry to ${today}. Next (CONTRIBUTING.md):
   git commit -am "Release v${version}"     # on a release branch; open a pull request and merge it
   git switch main && git pull --ff-only
   git tag -a v${version} -m "SimpRight Kit v${version}"

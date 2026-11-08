@@ -167,9 +167,31 @@ const cases: { name: string; change: (project: Project) => void; expect: string[
     name: "a known-issue line that isn't the scenario's",
     change: (p) => p.edit(CART_SPEC, 'Known issue BUG-002: The cart badge shows the number of lines, not the number of items.', 'Known issue BUG-002: The badge is wrong.'),
     expect: [
-      `${CART_FILE} UI-005: ${CART_SPEC} needs the known-issue line test.fail(true, 'Known issue BUG-002: The cart badge shows the number of lines, not the number of items.') (simpright.yml ui.knownIssue)`,
+      `${CART_FILE} UI-005: ${CART_SPEC} needs the known-issue line test.fail(true, 'Known issue BUG-002: The cart badge shows the number of lines, not the number of items.') (simpright.yml agents.ui.knownIssue)`,
       `${CART_SPEC}: the known-issue line 'Known issue BUG-002: The badge is wrong.' matches no scenario's knownIssue and bug`,
     ],
+  },
+  {
+    name: "a known-issue line that isn't the kit's default, in a layer without agents facts",
+    change: (p) => {
+      p.edit(
+        'simpright.yml',
+        "  ui:\n    exemplars:\n      page: src/app/pages/homePage.ts\n      component: src/app/pages/homePage.ts\n      fixtures: src/app/index.ts\n      spec: tests/ui/products/product-search.spec.ts\n    knownIssue: \"test.fail(true, 'Known issue {bug}: {text}');\"\n    rules:\n      - Every assertion carries a message.\n",
+        '',
+      );
+      p.edit(CART_SPEC, 'Known issue BUG-002: The cart badge shows the number of lines, not the number of items.', 'Known issue BUG-002: The badge is wrong.');
+    },
+    expect: [`${CART_SPEC} needs the known-issue line test.fail(true, 'Known issue BUG-002: The cart badge shows the number of lines, not the number of items.') (the kit's default known-issue line)`],
+  },
+  {
+    name: "a test without the layer's own known-issue line",
+    change: (p) =>
+      p.edit(
+        'simpright.yml',
+        "      spec: tests/ui/products/product-search.spec.ts\n    knownIssue: \"test.fail(true, 'Known issue {bug}: {text}');\"",
+        "      spec: tests/ui/products/product-search.spec.ts\n    knownIssue: \"test.fail(true, 'Bug {bug}: {text}');\"",
+      ),
+    expect: [`${CART_SPEC} needs the known-issue line test.fail(true, 'Bug BUG-002: The cart badge shows the number of lines, not the number of items.') (simpright.yml agents.ui.knownIssue)`],
   },
   {
     name: 'tests without a scenario of their own',

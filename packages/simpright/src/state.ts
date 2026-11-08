@@ -1,6 +1,7 @@
-// .simpright/state.json: what simpright apply last wrote. It records the kit version that applied and a hash of each
-// generated file, so the next apply overwrites or removes a file only while nobody has changed it since. The hash
-// leaves out each `uses:` reference (the commit and its version comment), so a Dependabot pin bump is never an edit.
+// .simpright/state.json: what simpright apply last wrote. It records the kit version that applied, a hash of each
+// generated file and a hash of the entries apply owns in a settings file (src/settings.ts), so the next apply
+// overwrites or removes them only while nobody has changed them since. A file's hash leaves out each `uses:` reference
+// (the commit and its version comment), so a Dependabot pin bump is never an edit.
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -13,6 +14,8 @@ export interface State {
   kit: string;
   /** Generated file → the hash of its text as apply wrote it (hashGenerated). */
   files: Record<string, string>;
+  /** Settings file → the hash of the entries apply wrote in it (hashEntries); empty when it wrote none. */
+  settings: Record<string, string>;
 }
 
 /** A `uses:` line: the action, then `@<ref>` and an optional `# <version>` comment. */
@@ -36,12 +39,14 @@ export function readState(root: string): State | undefined {
   const file = path.join(root, STATE_FILE);
   if (!existsSync(file)) return undefined;
   const state = JSON.parse(readFileSync(file, 'utf8')) as Partial<State>;
-  return { kit: String(state.kit ?? ''), files: state.files ?? {} };
+  return { kit: String(state.kit ?? ''), files: state.files ?? {}, settings: state.settings ?? {} };
 }
 
+/** Writes state.json, its keys sorted; `settings` only when apply wrote entries, so a project without them keeps its file as it was. */
 export function writeState(root: string, state: State): void {
   const file = path.join(root, STATE_FILE);
   mkdirSync(path.dirname(file), { recursive: true });
-  const files = Object.fromEntries(Object.entries(state.files).sort(([a], [b]) => a.localeCompare(b)));
-  writeFileSync(file, `${JSON.stringify({ kit: state.kit, files }, null, 2)}\n`);
+  const sorted = (map: Record<string, string>) => Object.fromEntries(Object.entries(map).sort(([a], [b]) => a.localeCompare(b)));
+  const settings = Object.keys(state.settings).length > 0 ? { settings: sorted(state.settings) } : {};
+  writeFileSync(file, `${JSON.stringify({ kit: state.kit, files: sorted(state.files), ...settings }, null, 2)}\n`);
 }

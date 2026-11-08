@@ -45,11 +45,19 @@ export interface Portal {
   healthThreshold?: Partial<Record<'ui' | 'api', number>>;
 }
 
-/** A layer's facts for the agents (simpright.yml api, ui): the files to copy the style from and the known-issue line. */
+/** A layer's facts for the agents (simpright.yml agents.api, agents.ui): the files to copy the style from and the known-issue line. */
 export interface LayerFacts {
   exemplars: Record<string, string>;
   knownIssue: string;
   rules: string[];
+}
+
+/** The QA agents' facts (simpright.yml agents), which the kit's simpright-qa plugin reads. */
+export interface AgentFacts {
+  api?: LayerFacts;
+  ui?: LayerFacts;
+  /** The guardrails for anything that calls the live app. */
+  liveApi: { writes: 'never' | 'ask' | 'allowed'; dangerous?: string[]; transient?: string[] };
 }
 
 /** The parts of simpright.yml the kit's tools read; simpright.schema.json describes the whole file. */
@@ -74,10 +82,12 @@ export interface Config {
     fileNames?: Record<string, string>;
   };
   roles: string[];
-  api?: LayerFacts;
-  ui?: LayerFacts;
+  agents?: AgentFacts;
   parts?: {
     scenarios?: boolean;
+    inspector?: boolean;
+    /** The QA agents: simpright apply enables the kit's plugin in .claude/settings.json. */
+    agents?: boolean;
     portal?: false | { testCases?: boolean; bugs?: boolean };
     coverage?: false | { package: string; registry?: string };
     wiki?: boolean;
@@ -116,7 +126,13 @@ export function projectRoot(rootOption: string | undefined): string {
   return root;
 }
 
-/** Parses simpright.yml in `root` and checks it against simpright.schema.json; throws a ConfigError when it doesn't match. */
+/** The top-level keys that kit 0.3.0 moved under agents. */
+const MOVED_TO_AGENTS = ['api', 'ui', 'liveApi'];
+
+/**
+ * Parses simpright.yml in `root` and checks it against simpright.schema.json; throws a ConfigError when it doesn't match.
+ * A file on the layout before kit 0.3.0 gets one line per moved key instead of the schema's errors.
+ */
 export function readConfig(root: string): Config {
   let config: unknown;
   try {
@@ -124,6 +140,8 @@ export function readConfig(root: string): Config {
   } catch (error) {
     throw new ConfigError([`${CONFIG_FILE}: ${(error as NodeJS.ErrnoException).code === 'ENOENT' ? 'not found' : `invalid YAML: ${(error as Error).message}`}`]);
   }
+  const moved = config !== null && typeof config === 'object' ? MOVED_TO_AGENTS.filter((key) => Object.hasOwn(config, key)) : [];
+  if (moved.length > 0) throw new ConfigError(moved.map((key) => `${CONFIG_FILE}: ${key} moved to agents.${key} in kit 0.3.0`));
   const validate = new Ajv({ allErrors: true }).compile<Config>(JSON.parse(readFileSync(CONFIG_SCHEMA_FILE, 'utf8')));
   if (validate(config)) return config;
   throw new ConfigError((validate.errors ?? []).map((error) => `${CONFIG_FILE}: ${error.instancePath || '/'} ${error.message}`));
