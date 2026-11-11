@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automation Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- The README banner's logo, inline: the publish copies only this file, so there's no favicon file on the site. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'%3E%3Crect width='44' height='44' rx='10' fill='%233fb950'/%3E%3Cpath d='M11 23l8 8l15-17' fill='none' stroke='%23fff' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <!-- Pinned with its hash; deferred, so the page and its data load while it downloads. -->
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+  <style>
+    /* The palette of the README banner (.github/assets/banner-dark.svg): GitHub's dark greys and greens. */
+    :root {
+      --bg: #0d1117;
+      --bg-end: #0e1813;
+      --surface: #161b22;
+      --surface-2: #21262d;
+      --line: #30363d;
+      --line-soft: #21262d;
+      --text: #e6edf3;
+      --text-strong: #f0f6fc;
+      --muted: #9198a1;
+      --green: #3fb950;
+      --green-hover: #56d364;
+      --green-bg: rgba(63, 185, 80, 0.12);
+      --green-line: rgba(63, 185, 80, 0.4);
+      --red: #f85149;
+      --red-text: #ffa198;
+      --red-bg: rgba(248, 81, 73, 0.1);
+      --red-line: rgba(248, 81, 73, 0.4);
+      --amber: #d29922;
+      --amber-text: #e3b341;
+      --amber-bg: rgba(210, 153, 34, 0.12);
+      --amber-line: rgba(210, 153, 34, 0.4);
+      --blue: #58a6ff;
+      --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    /* Class rules below set display, which would otherwise override the hidden attribute. */
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      line-height: 1.5;
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      background-color: var(--bg);
+      background-image: linear-gradient(180deg, var(--bg) 0%, var(--bg-end) 100%);
+      color: var(--text);
+    }
+
+    a { color: var(--green); }
+    a:hover { color: var(--green-hover); }
+
+    h1, h2, h3 { line-height: 1.2; color: var(--text-strong); }
+
+    .page {
+      display: grid;
+      grid-template-columns: 264px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    /* Side panel */
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 28px 20px;
+      border-right: 1px solid var(--line-soft);
+      background: rgba(13, 17, 23, 0.85);
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .brand svg { flex: none; }
+    .brand-name {
+      display: block;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      color: var(--text-strong);
+    }
+    .brand-name span { color: var(--green); }
+    .brand-sub {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.1;
+      color: var(--muted);
+    }
+
+    .side-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .side-nav h2 {
+      margin: 0 0 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+    .side-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: rgba(240, 246, 252, 0.03);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .side-link:hover {
+      color: var(--text);
+      background: rgba(240, 246, 252, 0.06);
+      border-color: var(--line);
+    }
+    .side-link svg { flex: none; color: var(--muted); }
+    .side-link .text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+    .side-link .sub { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+    /* A family's latest run: green healthy or without failures, red unhealthy or with failures, grey unknown. */
+    .run-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex: none;
+      background: var(--muted);
+    }
+    .run-dot.good { background: var(--green); }
+    .run-dot.bad { background: var(--red); }
+
+    .side-note {
+      margin: auto 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Main column */
+    .content {
+      padding: 32px 40px 48px;
+      max-width: 1240px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .intro { display: flex; flex-direction: column; gap: 18px; }
+    .intro h1 {
+      margin: 0 0 8px;
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .intro p {
+      margin: 0;
+      max-width: 64ch;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      color: var(--text-strong);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .button:hover {
+      color: var(--text-strong);
+      background: #292e36;
+      border-color: #8b949e;
+    }
+    .button svg { flex: none; color: var(--green); transition: transform .2s ease; }
+    .button[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+    /* Status cards */
+    .status-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    /* Fewer cards than four (a project with one layer, or without coverage) share the row without an empty slot. */
+    .status-row.cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .status-row.cards-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .status-row.cards-1 { grid-template-columns: minmax(0, 1fr); }
+    .status-card {
+      padding: 18px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .card-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .card-value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text-strong);
+    }
+    .card-sub { font-size: 13px; color: var(--muted); }
+
+    .status-chip {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      border: 1px solid var(--line);
+    }
+    .status-chip svg { display: none; }
+    .status-chip.healthy { color: var(--green); background: var(--green-bg); border-color: var(--green-line); }
+    .status-chip.healthy .icon-healthy { display: block; }
+    .status-chip.unhealthy { color: var(--red-text); background: var(--red-bg); border-color: var(--red-line); }
+    .status-chip.unhealthy .icon-unhealthy { display: block; }
+
+    .meter {
+      display: block;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+    .meter span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--green);
+    }
+
+    /* Sections */
+    .panel {
+      padding: 22px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-margin-top: 16px;
+    }
+    .panel-head { display: flex; flex-direction: column; gap: 2px; }
+    .panel-head h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-head p { margin: 0; font-size: 14px; color: var(--muted); }
+
+    .count-badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--amber-text);
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-line);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .stat {
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--bg);
+      border: 1px solid var(--line-soft);
+      text-decoration: none;
+      min-width: 0;
+    }
+    .stat .label { display: block; font-size: 12px; color: var(--muted); }
+    .stat .value { font-size: 22px; font-weight: 700; color: var(--text-strong); }
+    .stat .avg { font-size: 14px; font-weight: 500; color: var(--muted); }
+    a.stat.failed:hover { border-color: var(--line); }
+    /* Only the number turns red, and only when the run has failures. */
+    a.stat.failed .value.has-failures { color: var(--red); }
+
+    .trend-toggle { align-self: flex-start; }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .chart-card {
+      padding: 16px;
+      border-radius: 10px;
+      background: var(--bg);
+      border: 1px solid var(--line-soft);
+      min-width: 0;
+    }
+    .chart-card h3 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+    .chart-container { position: relative; height: 240px; }
+
+    /* Known issues */
+    .table-scroll { overflow-x: auto; }
+    table {
+      width: 100%;
+      min-width: 640px;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+    }
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line-soft);
+      vertical-align: top;
+      color: var(--text);
+    }
+    td.issue-text { color: var(--muted); }
+    tbody tr:hover td { background: rgba(240, 246, 252, 0.02); }
+    .area-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--surface-2);
+      color: var(--text);
+    }
+    .bug-link {
+      font-family: var(--mono);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .no-data {
+      padding: 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    /* Run history */
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    details {
+      border-radius: 10px;
+      background: var(--bg);
+      border: 1px solid var(--line-soft);
+    }
+    summary {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      min-height: 44px;
+      padding: 12px 14px;
+      cursor: pointer;
+      list-style: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary .name { flex: 1 1 180px; display: flex; flex-direction: column; }
+    summary .name strong { font-size: 15px; color: var(--text-strong); }
+    summary .name small { font-size: 12px; color: var(--muted); }
+    summary .more { font-size: 13px; font-weight: 600; color: var(--green); }
+    details[open] summary .more::before { content: 'Hide runs'; }
+    details:not([open]) summary .more::before { content: 'Show runs'; }
+
+    /* One square per run, oldest to newest. */
+    .run-strip { display: flex; gap: 4px; }
+    .run-strip span {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      background: var(--surface-2);
+    }
+    .run-strip span.good { background: var(--green); }
+    .run-strip span.bad { background: var(--red); }
+
+    .run-list {
+      list-style: none;
+      margin: 0;
+      padding: 0 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .run-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid transparent;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .run-link:hover { color: var(--text); border-color: var(--line); }
+    .run-link .run-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+    .run-link .run-result { font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; color: var(--muted); }
+    .run-link .open { font-family: 'IBM Plex Sans', sans-serif; font-weight: 600; color: var(--green); }
+    .run-empty { color: var(--muted); font-size: 14px; padding: 4px 0; }
+
+    .footer-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+      .status-row, .status-row.cards-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stats-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .chart-grid { grid-template-columns: 1fr; }
+    }
+
+    /* The side panel moves above the content, its link lists side by side. */
+    @media (max-width: 900px) {
+      .page { grid-template-columns: minmax(0, 1fr); }
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line-soft);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+      }
+      .sidebar .brand, .side-note { grid-column: 1 / -1; }
+      .content { padding: 24px 16px 40px; }
+    }
+
+    @media (max-width: 600px) {
+      .sidebar { grid-template-columns: 1fr; padding: 20px 16px; }
+      .intro h1 { font-size: 28px; }
+      .status-row, .status-row.cards-3, .status-row.cards-2 { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .panel { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <aside class="sidebar">
+      <a class="brand" href="#">
+        <svg width="40" height="40" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="#3fb950"/><path d="M11 23l8 8l15-17" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <!-- The brand comes from portal.json (simpright.yml portal), like everything else that names the project. -->
+        <span><span class="brand-name" id="brand-name"></span><span class="brand-sub" id="brand-tagline"></span></span>
+      </a>
+
+      <nav class="side-nav" aria-label="Navigate">
+        <h2>Navigate</h2>
+        <a class="side-link" href="#known-issues">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+          Known issues
+        </a>
+        <a class="side-link" href="#history">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          Run history
+        </a>
+        <!-- Repository links: shown once portal.json names the repository the site was published from, so forks link to their own. -->
+        <a class="side-link" data-repo-link="actions" target="_blank" rel="noreferrer" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l14 8-14 8z"/></svg>
+          Schedule a test run
+        </a>
+        <a class="side-link" data-repo-link="wiki" target="_blank" rel="noreferrer" hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/></svg>
+          Wiki
+        </a>
+      </nav>
+
+      <!-- One link per run in portal.json (simpright.yml runs), with a dot for its latest result. -->
+      <nav class="side-nav" aria-label="Latest reports" id="latest-reports">
+        <h2>Latest reports</h2>
+      </nav>
+
+      <p class="side-note" id="portal-description" hidden></p>
+    </aside>
+
+    <main class="content">
+      <section class="intro">
+        <div>
+          <h1>Automation Portal</h1>
+          <!-- renderIntro() names what the portal has: its regressions' layers and, when it's published, the API coverage. -->
+          <p id="intro-text">Latest reports, API coverage, trends, known issues and the history of every UI and API run, published by GitHub Actions.</p>
+        </div>
+        <div class="actions">
+          <!-- Coverage elements stay hidden until latest/api-coverage/totals.json exists (the coverage tool is optional). -->
+          <a class="button" data-coverage hidden href="latest/api-coverage/" target="_blank" rel="noreferrer">API coverage</a>
+          <!-- The Test Cases pages (simpright-portal build-pages) stay hidden until they're published. -->
+          <a class="button" data-test-cases="ui" hidden href="test-cases/ui/" target="_blank" rel="noreferrer">UI test cases</a>
+          <a class="button" data-test-cases="api" hidden href="test-cases/api/" target="_blank" rel="noreferrer">API test cases</a>
+          <!-- The Bugs page (simpright-portal build-pages) is published with the Test Cases pages and stays hidden until it exists. -->
+          <a class="button" data-bugs hidden href="bugs/" target="_blank" rel="noreferrer">Bugs</a>
+        </div>
+      </section>
+
+      <!-- A layer's card and trends show its regression: the run with that trend in portal.json; without one they're hidden. -->
+      <section class="status-row" aria-label="Status">
+        <div class="status-card" data-layer="ui">
+          <span class="card-label" id="ui-label">UI regression</span>
+          <span class="status-chip" id="ui-status">
+            <svg class="icon-healthy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+            <svg class="icon-unhealthy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            <span class="text">No data</span>
+          </span>
+          <span class="card-sub">Total – <span id="ui-total-tests">-</span> tests</span>
+        </div>
+        <div class="status-card" data-layer="api">
+          <span class="card-label" id="api-label">API regression</span>
+          <span class="status-chip" id="api-status">
+            <svg class="icon-healthy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+            <svg class="icon-unhealthy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            <span class="text">No data</span>
+          </span>
+          <span class="card-sub">Total – <span id="api-total-tests">-</span> tests</span>
+        </div>
+        <div class="status-card" data-coverage hidden>
+          <span class="card-label">API contract coverage</span>
+          <span class="card-value" id="api-contract-coverage">-</span>
+          <span class="meter" aria-hidden="true"><span id="api-coverage-meter"></span></span>
+          <span class="card-sub">Against the API contracts</span>
+        </div>
+        <div class="status-card" data-coverage hidden>
+          <span class="card-label">Endpoints covered</span>
+          <span class="card-value" id="api-endpoint-coverage">-</span>
+          <a class="card-sub" href="latest/api-coverage/" target="_blank" rel="noreferrer">Open the coverage report</a>
+        </div>
+      </section>
+
+      <!-- One section per regression; the charts are built the first time they're shown. -->
+      <section class="panel" id="ui-trends" data-layer="ui">
+        <div class="panel-head">
+          <h2>UI trends</h2>
+          <p id="ui-trends-sub">Latest 10 runs of the UI regression, oldest to newest</p>
+        </div>
+        <div class="stats-row">
+          <div class="stat"><span class="label">Total</span><span class="value" id="ui-total">-</span></div>
+          <div class="stat"><span class="label">Passed</span><span class="value" id="ui-passed">-</span></div>
+          <a class="stat failed" id="ui-failed-link" target="_blank" rel="noreferrer"><span class="label">Failed</span><span class="value" id="ui-failed">-</span></a>
+          <div class="stat"><span class="label">Run duration</span><span class="value" id="ui-duration">-</span></div>
+          <div class="stat"><span class="label">Average duration</span><span class="value" id="ui-avg-duration">-</span></div>
+          <div class="stat"><span class="label">Failure rate (avg)</span><span class="value" id="ui-failure-rate">-</span> <span class="avg" id="ui-avg-failure-rate"></span></div>
+        </div>
+        <button type="button" class="button trend-toggle" data-trends="ui" aria-expanded="false" aria-controls="ui-charts">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          <span>Show trends</span>
+        </button>
+        <div class="chart-grid" id="ui-charts" hidden>
+          <div class="chart-card">
+            <h3>Failure rate per run</h3>
+            <div class="chart-container"><canvas id="uiFailureRateChart" role="img" aria-label="Failure rate per run of the UI regression"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Duration per run</h3>
+            <div class="chart-container"><canvas id="uiDurationChart" role="img" aria-label="Duration per run of the UI regression"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="api-trends" data-layer="api">
+        <div class="panel-head">
+          <h2>API trends</h2>
+          <p id="api-trends-sub">Latest 10 runs of the API regression, oldest to newest</p>
+        </div>
+        <div class="stats-row">
+          <div class="stat"><span class="label">Total</span><span class="value" id="api-total">-</span></div>
+          <div class="stat"><span class="label">Passed</span><span class="value" id="api-passed">-</span></div>
+          <a class="stat failed" id="api-failed-link" target="_blank" rel="noreferrer"><span class="label">Failed</span><span class="value" id="api-failed">-</span></a>
+          <div class="stat"><span class="label">Run duration</span><span class="value" id="api-duration">-</span></div>
+          <div class="stat"><span class="label">Average duration</span><span class="value" id="api-avg-duration">-</span></div>
+          <div class="stat"><span class="label">Failure rate (avg)</span><span class="value" id="api-failure-rate">-</span> <span class="avg" id="api-avg-failure-rate"></span></div>
+        </div>
+        <button type="button" class="button trend-toggle" data-trends="api" aria-expanded="false" aria-controls="api-charts">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          <span>Show trends</span>
+        </button>
+        <div class="chart-grid" id="api-charts" hidden>
+          <div class="chart-card">
+            <h3>Failure rate per run</h3>
+            <div class="chart-container"><canvas id="apiFailureRateChart" role="img" aria-label="Failure rate per run of the API regression"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <h3>Duration per run</h3>
+            <div class="chart-container"><canvas id="apiDurationChart" role="img" aria-label="Duration per run of the API regression"></canvas></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="known-issues">
+        <div class="panel-head">
+          <h2>Known issues <span class="count-badge" id="known-issues-count" hidden></span></h2>
+        </div>
+        <div class="table-scroll">
+          <table id="knownIssuesTable">
+            <thead>
+              <tr>
+                <th>Area</th>
+                <th>Test</th>
+                <th>Bug</th>
+                <th>Issue</th>
+              </tr>
+            </thead>
+            <tbody id="knownIssuesBody">
+              <tr>
+                <td colspan="4" class="no-data">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Collapsed by default to the first rows (KNOWN_ISSUES_PREVIEW); shown only when there are more. -->
+        <button type="button" class="button trend-toggle" id="knownIssuesToggle" aria-controls="knownIssuesTable" aria-expanded="false" hidden></button>
+      </section>
+
+      <section class="panel" id="history">
+        <div class="panel-head">
+          <h2>Run history</h2>
+          <p>The latest 10 runs of each family. One square per run, newest on the right: green without failures, red with failures, grey without results.</p>
+        </div>
+        <!-- One row per run in portal.json. -->
+        <div class="history-list" id="history-list">
+          <p class="run-empty">Loading...</p>
+        </div>
+      </section>
+
+      <p class="footer-note">Published by GitHub Actions. Each report family keeps its latest 10 runs, unless its workflow sets another number.</p>
+    </main>
+  </div>
+
+  <script>
+    // The page's colors, for the charts (Chart.js draws on a canvas, so it can't read the CSS variables).
+    const COLORS = {
+      green: '#3fb950',
+      red: '#f85149',
+      blue: '#58a6ff',
+      muted: '#9198a1',
+      text: '#e6edf3',
+      grid: 'rgba(240, 246, 252, 0.08)'
+    };
+
+    // A layer's latest regression is healthy when its failure rate is below its threshold (portal.json healthThreshold).
+    const DEFAULT_THRESHOLD = 1;
+
+    function formatDuration(durationMs) {
+      const seconds = durationMs / 1000;
+      return seconds < 60 ? `${seconds.toFixed(1)}s` : `${(seconds / 60).toFixed(2)}m`;
+    }
+
+    function toSeconds(durationMs) {
+      return +(durationMs / 1000).toFixed(1);
+    }
+
+    function translucent(hex, alpha) {
+      const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    function chartOptions(yTitle, legend) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display: legend,
+            labels: { color: COLORS.text, usePointStyle: true, boxWidth: 8, padding: 16, font: { family: 'IBM Plex Sans', size: 12 } }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: COLORS.muted, font: { family: 'IBM Plex Sans' } }
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: yTitle, color: COLORS.muted, font: { family: 'IBM Plex Sans' } },
+            grid: { color: COLORS.grid },
+            ticks: { color: COLORS.muted, font: { family: 'IBM Plex Sans' } }
+          }
+        }
+      };
+    }
+
+    function lineDataset(label, data, color, pointColors) {
+      return {
+        label,
+        data,
+        borderColor: color,
+        backgroundColor: translucent(color, 0.12),
+        borderWidth: 2,
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: pointColors || color,
+        pointBorderColor: pointColors || color,
+        pointRadius: 3,
+        pointHoverRadius: 5
+      };
+    }
+
+    function createChart(canvasId, labels, datasets, options) {
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      return new Chart(ctx, { type: 'line', data: { labels, datasets }, options });
+    }
+
+    function createDurationChart(canvasId, series) {
+      createChart(canvasId, series.map(item => item.run), [
+        lineDataset('Duration (seconds)', series.map(item => toSeconds(item.duration)), COLORS.blue)
+      ], chartOptions('seconds', false));
+    }
+
+    // Each point is green below the health threshold and red above it; the line takes the latest run's color.
+    function createFailureRateChart(canvasId, series, threshold) {
+      const rates = series.map(item => +item.failureRate.toFixed(2));
+      const pointColors = rates.map(rate => rate < threshold ? COLORS.green : COLORS.red);
+      const latestRate = rates.length > 0 ? rates[rates.length - 1] : 0;
+      const options = chartOptions('% failed', true);
+      options.scales.y.suggestedMax = threshold * 2;
+      createChart(canvasId, series.map(item => item.run), [
+        lineDataset('Failure rate %', rates, latestRate < threshold ? COLORS.green : COLORS.red, pointColors),
+        {
+          label: `Healthy below ${threshold}%`,
+          data: rates.map(() => threshold),
+          borderColor: COLORS.muted,
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          fill: false
+        }
+      ], options);
+    }
+
+    // portal.json, written next to this page on every publish (@simpright/portal, from simpright.yml): the brand and
+    // description, the repository, the health thresholds, and the runs, each a report family published by
+    // simpright-portal publish-run; a run with a trend is its layer's regression. Null when it's missing.
+    async function loadPortal() {
+      try {
+        const response = await fetch('portal.json');
+        return response.ok ? await response.json() : null;
+      } catch (error) {
+        console.error('Error loading portal.json:', error);
+        return null;
+      }
+    }
+
+    // The title, with its accent (the end of it, such as "Right") in green, and the tagline and description.
+    function renderBrand(portal) {
+      document.title = `${portal.title} - Automation Portal`;
+      const accent = portal.titleAccent && portal.title.endsWith(portal.titleAccent) ? portal.titleAccent : '';
+      const name = document.getElementById('brand-name');
+      name.textContent = portal.title.slice(0, portal.title.length - accent.length);
+      if (accent) {
+        const span = document.createElement('span');
+        span.textContent = accent;
+        name.appendChild(span);
+      }
+      setText('brand-tagline', portal.tagline || '');
+      const description = document.getElementById('portal-description');
+      description.textContent = portal.description || '';
+      description.hidden = !portal.description;
+    }
+
+    // Latest reports: one link per run, with a dot for its latest result.
+    function renderLatestReports(runs) {
+      const nav = document.getElementById('latest-reports');
+      runs.forEach((run) => {
+        const link = document.createElement('a');
+        link.className = 'side-link';
+        link.href = `latest/${run.id}/`;
+        link.target = '_blank';
+        link.rel = 'noreferrer';
+        const dot = document.createElement('span');
+        dot.className = 'run-dot';
+        dot.dataset.familyDot = run.id;
+        const text = document.createElement('span');
+        text.className = 'text';
+        text.textContent = run.label;
+        if (run.note) {
+          const sub = document.createElement('span');
+          sub.className = 'sub';
+          sub.textContent = run.note;
+          text.appendChild(sub);
+        }
+        link.append(dot, text);
+        nav.appendChild(link);
+      });
+    }
+
+    // Run history: one row per run; renderHistoryList fills it in.
+    function renderHistoryRows(runs) {
+      document.getElementById('history-list').replaceChildren(...runs.map((run) => {
+        const details = document.createElement('details');
+        const summary = document.createElement('summary');
+        const name = document.createElement('span');
+        name.className = 'name';
+        const label = document.createElement('strong');
+        label.textContent = run.label;
+        const limit = document.createElement('small');
+        limit.textContent = 'Latest 10 runs';
+        name.append(label, limit);
+        const strip = document.createElement('span');
+        strip.className = 'run-strip';
+        strip.id = `history-${run.id}-strip`;
+        const more = document.createElement('span');
+        more.className = 'more';
+        summary.append(name, strip, more);
+        const list = document.createElement('ul');
+        list.className = 'run-list';
+        list.id = `history-${run.id}-list`;
+        const loading = document.createElement('li');
+        loading.className = 'run-empty';
+        loading.textContent = 'Loading...';
+        list.appendChild(loading);
+        details.append(summary, list);
+        return details;
+      }));
+    }
+
+    // Each layer's regression (the run with that trend) labels its status card and trends; a layer without one is hidden.
+    function renderLayers(regressions) {
+      ['ui', 'api'].forEach((layer) => {
+        const run = regressions[layer];
+        document.querySelectorAll(`[data-layer="${layer}"]`).forEach((el) => { el.hidden = !run; });
+        if (!run) return;
+        setText(`${layer}-label`, run.label);
+        setText(`${layer}-trends-sub`, `Latest 10 runs of the ${run.label}, oldest to newest`);
+        document.getElementById(`${layer}-failed-link`).href = `latest/${run.id}/#?q=s%3Afailed`;
+      });
+      fitStatusRow();
+    }
+
+    // The status row's columns follow its visible cards (a hidden layer or missing coverage leaves no empty slot); with
+    // none, the row goes.
+    function fitStatusRow() {
+      const row = document.querySelector('.status-row');
+      const visible = [...row.children].filter((card) => !card.hidden).length;
+      row.classList.remove('cards-1', 'cards-2', 'cards-3');
+      if (visible > 0 && visible < 4) row.classList.add(`cards-${visible}`);
+      row.hidden = visible === 0;
+    }
+
+    // The intro names what this portal has: the layers with a regression, and the API coverage when it's published.
+    function renderIntro(layers, hasCoverage) {
+      const names = ['ui', 'api'].filter((layer) => layers.includes(layer)).map((layer) => layer.toUpperCase());
+      const parts = ['Latest reports', ...(hasCoverage ? ['API coverage'] : []), ...(names.length ? ['trends', 'known issues'] : [])];
+      const runs = names.length ? `every ${names.join(' and ')} run` : 'every run';
+      setText('intro-text', `${parts.join(', ')} and the history of ${runs}, published by GitHub Actions.`);
+    }
+
+    function showMissingPortal() {
+      const message = 'No portal.json next to this page: simpright-portal writes it on every publish.';
+      document.querySelectorAll('[data-layer]').forEach((el) => { el.hidden = true; });
+      fitStatusRow();
+      document.getElementById('knownIssuesBody').innerHTML = `<tr><td colspan="4" class="no-data">${message}</td></tr>`;
+      document.getElementById('history-list').innerHTML = `<p class="run-empty">${message}</p>`;
+    }
+
+    // A family's <family>-history.json, written at publish time by @simpright/portal's run summaries: every kept run,
+    // newest first, with its Playwright stats (null when the run has no results), and the newest run's known issues.
+    // The page never downloads a run's results.json (an API regression's is about 8 MB). Null when nothing is published.
+    async function loadHistory(family) {
+      try {
+        const response = await fetch(`${family}-history.json`);
+        if (!response.ok) return null;
+        return await response.json();
+      } catch (error) {
+        console.error(`Error loading ${family}-history.json:`, error);
+        return null;
+      }
+    }
+
+    // A run's counts from its Playwright stats. A known-issue test that fails as expected counts as passed.
+    function countsOf(stats) {
+      const passed = stats.expected || 0;
+      const failed = stats.unexpected || 0;
+      const skipped = stats.skipped || 0;
+      const flaky = stats.flaky || 0;
+      const total = passed + failed + skipped + flaky;
+      const duration = stats.duration || 0;
+      const failureRate = total > 0 ? ((failed / total) * 100) : 0;
+      return { passed, failed, total, duration, failureRate, flaky };
+    }
+
+    // The latest `limit` runs that have results, oldest first.
+    function toSeries(history, limit = 10) {
+      if (!history) return [];
+      return history.runs.filter(item => item.stats).slice(0, limit).reverse().map(({ run, stats }) => ({ run, ...countsOf(stats) }));
+    }
+
+    // How many known issues the collapsed table shows.
+    const KNOWN_ISSUES_PREVIEW = 3;
+
+    // Lists the tests of the latest regressions with an annotation containing "Known issue", e.g.
+    // test.fail(true, 'Known issue BUG-003: ...'); the bug ID links to the Bugs page.
+    // Collapsed by default: the first KNOWN_ISSUES_PREVIEW rows and a button that shows the rest.
+    function renderKnownIssues(histories) {
+      const tbody = document.getElementById('knownIssuesBody');
+      const knownIssues = [];
+      histories.forEach(history => (history?.knownIssues || []).forEach(issue => {
+        const exists = knownIssues.some(known => known.testName === issue.testName && known.description === issue.description);
+        if (!exists) knownIssues.push(issue);
+      }));
+
+      const count = document.getElementById('known-issues-count');
+      count.textContent = `${knownIssues.length} open`;
+      count.hidden = knownIssues.length === 0;
+
+      tbody.innerHTML = '';
+      if (knownIssues.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="no-data">No known issues.</td></tr>';
+        return;
+      }
+
+      knownIssues.forEach(issue => {
+        const row = document.createElement('tr');
+        const bug = /^Known issue ([A-Z]+-\d+):/.exec(issue.description)?.[1];
+        const text = issue.description.replace(/^Known issue( [A-Z]+-\d+)?: /, '');
+        [issue.area, issue.testName, bug, text].forEach((value, index) => {
+          const cell = document.createElement('td');
+          if (index === 0 && value) {
+            const chip = document.createElement('span');
+            chip.className = 'area-chip';
+            chip.textContent = value;
+            cell.appendChild(chip);
+          } else if (index === 2 && value) {
+            const link = document.createElement('a');
+            link.href = `bugs/#bug=${encodeURIComponent(value)}`;
+            link.target = '_blank';
+            link.rel = 'noreferrer';
+            link.className = 'bug-link';
+            link.textContent = value;
+            cell.appendChild(link);
+          } else {
+            cell.textContent = value || '-';
+          }
+          if (index === 3) cell.className = 'issue-text';
+          row.appendChild(cell);
+        });
+        tbody.appendChild(row);
+      });
+
+      const toggle = document.getElementById('knownIssuesToggle');
+      const rows = [...tbody.rows];
+      const setExpanded = (expanded) => {
+        rows.forEach((row, index) => { row.hidden = !expanded && index >= KNOWN_ISSUES_PREVIEW; });
+        toggle.setAttribute('aria-expanded', String(expanded));
+        toggle.textContent = expanded ? `Show only the first ${KNOWN_ISSUES_PREVIEW}` : `Show all ${rows.length} known issues`;
+      };
+      toggle.hidden = rows.length <= KNOWN_ISSUES_PREVIEW;
+      toggle.onclick = () => {
+        const expand = toggle.getAttribute('aria-expanded') !== 'true';
+        setExpanded(expand);
+        // Collapsing a long table would leave the reader far below it: bring the button back into view.
+        if (!expand) toggle.scrollIntoView({ block: 'nearest' });
+      };
+      setExpanded(false);
+    }
+
+    // prefix: 'ui-' or 'api-', the ids of the regression's Trends section.
+    function updateStats(prefix, series) {
+      const latest = series[series.length - 1];
+      const averageDuration = series.reduce((sum, item) => sum + item.duration, 0) / series.length;
+      const averageFailureRate = series.reduce((sum, item) => sum + item.failureRate, 0) / series.length;
+
+      setText(`${prefix}total`, latest.total);
+      setText(`${prefix}passed`, latest.passed + (latest.flaky || 0));
+      setText(`${prefix}failed`, latest.failed);
+      document.getElementById(`${prefix}failed`)?.classList.toggle('has-failures', latest.failed > 0);
+      setText(`${prefix}duration`, formatDuration(latest.duration));
+      setText(`${prefix}avg-duration`, formatDuration(averageDuration));
+      setText(`${prefix}failure-rate`, `${latest.failureRate.toFixed(2)}%`);
+      setText(`${prefix}avg-failure-rate`, `(${averageFailureRate.toFixed(2)}%)`);
+      setText(`${prefix}total-tests`, latest.total);
+    }
+
+    function isHealthy(series, threshold) {
+      return series[series.length - 1].failureRate < threshold;
+    }
+
+    // The status card's chip and the regression's dot in Latest reports.
+    function updateStatus(layer, family, series, threshold) {
+      const chip = document.getElementById(`${layer}-status`);
+      if (series.length === 0) return;
+      const healthy = isHealthy(series, threshold);
+      chip.classList.add(healthy ? 'healthy' : 'unhealthy');
+      chip.querySelector('.text').textContent = healthy ? 'Healthy' : 'Unhealthy';
+      setDot(family, healthy, `Latest run ${healthy ? 'healthy' : 'unhealthy'}: ${series[series.length - 1].failureRate.toFixed(2)}% failed`);
+    }
+
+    function setDot(family, good, title) {
+      const dot = document.querySelector(`[data-family-dot="${family}"]`);
+      if (!dot) return;
+      dot.classList.add(good ? 'good' : 'bad');
+      dot.title = title;
+    }
+
+    // totals.json holds summary.json's totals without the per-endpoint detail (@simpright/portal's run summaries).
+    // True when the coverage is published.
+    async function loadApiCoverage() {
+      try {
+        const response = await fetch('latest/api-coverage/totals.json');
+        if (!response.ok) return false;
+
+        const summary = await response.json();
+        if (typeof summary.overallCoveragePct === 'number') {
+          setText('api-contract-coverage', `${summary.overallCoveragePct}%`);
+          document.getElementById('api-coverage-meter').style.width = `${Math.min(100, Math.max(0, summary.overallCoveragePct))}%`;
+        }
+        if (typeof summary.coveredEndpoints === 'number' && typeof summary.totalEndpoints === 'number') {
+          setText('api-endpoint-coverage', `${summary.coveredEndpoints} / ${summary.totalEndpoints}`);
+        }
+        document.querySelectorAll('[data-coverage]').forEach((el) => { el.hidden = false; });
+        fitStatusRow();
+        return true;
+      } catch {
+        console.debug('No API coverage summary available yet');
+        return false;
+      }
+    }
+
+    async function loadTestCaseLinks() {
+      await Promise.all([...document.querySelectorAll('[data-test-cases]')].map(async (link) => {
+        try {
+          const response = await fetch(`test-cases/${link.dataset.testCases}/scenarios-data.js`, { method: 'HEAD' });
+          link.hidden = !response.ok;
+        } catch {
+          console.debug(`No ${link.dataset.testCases} test cases published yet`);
+        }
+      }));
+      try {
+        const response = await fetch('bugs/bugs-data.js', { method: 'HEAD' });
+        document.querySelectorAll('[data-bugs]').forEach((link) => { link.hidden = !response.ok; });
+      } catch {
+        console.debug('No Bugs page published yet');
+      }
+    }
+
+    // The repository the site was published from (portal.json), so a fork's portal links to the fork.
+    // The repository's pages in the side panel: its workflows, and its wiki when the project publishes one.
+    function setRepoLinks(repository, { wiki }) {
+      if (!repository) return;
+      document.querySelectorAll('[data-repo-link]').forEach((link) => {
+        link.href = `${repository}/${link.dataset.repoLink}`;
+        link.hidden = link.dataset.repoLink === 'wiki' && !wiki;
+      });
+    }
+
+    // Show trends / Hide trends: the charts of a regression are created the first time they're shown,
+    // so Chart.js measures a visible canvas, and only when Chart.js has loaded (chartsReady).
+    function bindTrendToggles(seriesByLayer, chartsReady, thresholds) {
+      const built = new Set();
+      document.querySelectorAll('[data-trends]').forEach((button) => {
+        const layer = button.dataset.trends;
+        const charts = document.getElementById(`${layer}-charts`);
+        button.addEventListener('click', async () => {
+          if (!seriesByLayer[layer]) return;
+          const open = button.getAttribute('aria-expanded') !== 'true';
+          button.setAttribute('aria-expanded', String(open));
+          button.querySelector('span').textContent = open ? 'Hide trends' : 'Show trends';
+          charts.hidden = !open;
+          if (!open || built.has(layer)) return;
+          built.add(layer);
+          await chartsReady;
+          const series = await seriesByLayer[layer];
+          createFailureRateChart(`${layer}FailureRateChart`, series, thresholds[layer] ?? DEFAULT_THRESHOLD);
+          createDurationChart(`${layer}DurationChart`, series);
+        });
+      });
+    }
+
+    function renderRegression(layer, family, series, threshold) {
+      updateStatus(layer, family, series, threshold);
+      if (series.length > 0) updateStats(`${layer}-`, series);
+    }
+
+    // A run's square and result: good without failures, bad with failures, none without results.
+    function runResult(stats) {
+      if (!stats) return { kind: '', text: 'No results' };
+      const { failed, total } = countsOf(stats);
+      return failed > 0
+        ? { kind: 'bad', text: `${failed} of ${total} failed` }
+        : { kind: 'good', text: `${total} passed` };
+    }
+
+    function renderHistoryList(run, history, limit = 10) {
+      const family = run.id;
+      const list = document.getElementById(`history-${family}-list`);
+      const strip = document.getElementById(`history-${family}-strip`);
+      const runs = history ? history.runs.slice(0, limit) : [];
+
+      if (runs.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'run-empty';
+        li.textContent = history ? 'No runs found' : 'No runs published yet';
+        list.replaceChildren(li);
+        strip.replaceChildren();
+        return;
+      }
+
+      const results = runs.map(item => runResult(item.stats));
+      // The strip runs oldest to newest, like the charts.
+      strip.replaceChildren(...runs.map((item, index) => {
+        const square = document.createElement('span');
+        if (results[index].kind) square.className = results[index].kind;
+        square.title = `${item.run}: ${results[index].text}`;
+        return square;
+      }).reverse());
+      const withFailures = results.filter(result => result.kind === 'bad').length;
+      strip.setAttribute('role', 'img');
+      strip.setAttribute('aria-label', `${withFailures} of the latest ${runs.length} runs had failures`);
+
+      // The family's newest run sets its dot in Latest reports; the regressions' dots (runs with a trend) show their health instead.
+      if (!run.trend && results[0].kind) {
+        setDot(family, results[0].kind === 'good', `Latest run: ${results[0].text}`);
+      }
+
+      list.replaceChildren(...runs.map((item, index) => {
+        const li = document.createElement('li');
+        const link = document.createElement('a');
+        link.className = 'run-link';
+        link.href = `${family}/${item.run}/`;
+        link.target = '_blank';
+        link.rel = 'noreferrer';
+        const name = document.createElement('span');
+        name.className = 'run-name';
+        name.textContent = item.run;
+        const result = document.createElement('span');
+        result.className = 'run-result';
+        result.textContent = results[index].text;
+        const open = document.createElement('span');
+        open.className = 'open';
+        open.textContent = 'Open report';
+        link.append(name, result, open);
+        li.appendChild(link);
+        return li;
+      }));
+    }
+
+    // This script runs after the page's markup, so the data loads at once, in parallel with the deferred Chart.js:
+    // portal.json first (it names the runs), then every run's history. Only the charts wait for DOMContentLoaded,
+    // which fires after Chart.js has run.
+    const chartsReady = new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+    const coverage = loadApiCoverage();
+    loadTestCaseLinks();
+    const portalLoaded = loadPortal();
+    // The intro waits for both, so it's written once.
+    Promise.all([portalLoaded, coverage]).then(([portal, hasCoverage]) => {
+      if (portal) renderIntro(portal.runs.map((run) => run.trend).filter(Boolean), hasCoverage);
+    });
+    portalLoaded.then((portal) => {
+      if (!portal) {
+        showMissingPortal();
+        return;
+      }
+      renderBrand(portal);
+      setRepoLinks(portal.repository, { wiki: portal.wiki === true });
+      renderLatestReports(portal.runs);
+      renderHistoryRows(portal.runs);
+      const regressions = Object.fromEntries(portal.runs.filter(run => run.trend).map(run => [run.trend, run]));
+      const thresholds = portal.healthThreshold || {};
+      renderLayers(regressions);
+
+      const histories = Object.fromEntries(portal.runs.map(run => [run.id, loadHistory(run.id)]));
+      portal.runs.forEach(run => histories[run.id].then(history => renderHistoryList(run, history)));
+      const seriesByLayer = Object.fromEntries(Object.entries(regressions).map(([layer, run]) => [layer, histories[run.id].then(history => toSeries(history))]));
+      bindTrendToggles(seriesByLayer, chartsReady, thresholds);
+      Object.entries(regressions).forEach(([layer, run]) => {
+        seriesByLayer[layer].then(series => renderRegression(layer, run.id, series, thresholds[layer] ?? DEFAULT_THRESHOLD));
+      });
+      Promise.all(Object.values(regressions).map(run => histories[run.id])).then(renderKnownIssues);
+    });
+  </script>
+</body>
+</html>
