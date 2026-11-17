@@ -3,9 +3,11 @@
 //   steps against;
 // - the pins of the third-party actions the kit's own workflows and actions use, which simpright apply writes into the
 //   workflows it generates. The kit's Dependabot keeps those pins current, so each build takes them as they are.
-// Runs as part of `npm run build`; src/kit.ts reads the file.
+// It also copies the kit's plugins (plugins/<name>/: the manifest, agents, skills and shared files) into
+// packages/simpright/dist/plugins/, which simpright apply writes into a project as plain files (src/plain.ts).
+// Runs as part of `npm run build`; src/kit.ts reads both.
 
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
@@ -58,4 +60,14 @@ for (const file of files) {
 mkdirSync(path.dirname(OUT), { recursive: true });
 const sorted = Object.fromEntries(Object.entries(pins).sort(([a], [b]) => a.localeCompare(b)));
 writeFileSync(OUT, `${JSON.stringify({ actions, pins: sorted }, null, 2)}\n`);
+
+// The plugins: what apply converts, and nothing else (a plugin's README describes the plugin form).
+const PLUGINS_OUT = path.join(KIT, 'packages/simpright/dist/plugins');
+rmSync(PLUGINS_OUT, { recursive: true, force: true });
+for (const plugin of readdirSync(path.join(KIT, 'plugins'), { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+  for (const part of ['.claude-plugin', 'agents', 'skills', 'shared']) {
+    const from = path.join(KIT, 'plugins', plugin.name, part);
+    if (existsSync(from)) cpSync(from, path.join(PLUGINS_OUT, plugin.name, part), { recursive: true });
+  }
+}
 console.log(`kit-data.json: ${Object.keys(actions).length} action(s), ${Object.keys(sorted).length} pin(s)`);

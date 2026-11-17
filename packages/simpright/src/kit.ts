@@ -1,10 +1,12 @@
 // What the simpright command knows about the kit itself. At build time scripts/kit-data.ts writes dist/kit-data.json:
 // the kit's actions (their inputs and steps, which simpright doctor checks a workflow's steps against) and the pins of
-// the third-party actions the generated workflows use. A published package also has dist/release.json, written by the
+// the third-party actions the generated workflows use; it also copies the kit's plugins into dist/plugins/, which
+// simpright apply writes into a project as plain files. A published package also has dist/release.json, written by the
 // kit's release workflow: the release's commit, which the generated workflows pin the kit's actions to (a commit can't
 // hold its own SHA, so the release run records it).
 
 import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { LocalAction } from './workflows.ts';
 
 /** The kit's repository on GitHub. */
@@ -28,6 +30,8 @@ export interface Kit {
   actions: Record<string, LocalAction['action']>;
   /** Third-party action (actions/checkout) → its pin in the kit's own workflows. */
   pins: Record<string, Pin>;
+  /** The folder of the kit's plugins, one folder each (dist/plugins in the package); undefined in a build without them. */
+  plugins?: string;
 }
 
 /** Whether version `a` (v7.0.2) is newer than `b` (v7.0.1); a missing part counts as 0. */
@@ -49,5 +53,12 @@ export function currentKit(): Kit {
   const data = readJson<Pick<Kit, 'actions' | 'pins'>>(fromPackage('dist/kit-data.json'));
   const releaseFile = fromPackage('dist/release.json');
   const release = existsSync(releaseFile) ? readJson<{ version?: string; commit?: string }>(releaseFile) : undefined;
-  return { version, commit: release?.version === version ? release.commit : undefined, actions: data.actions, pins: data.pins };
+  const plugins = fromPackage('dist/plugins');
+  return {
+    version,
+    commit: release?.version === version ? release.commit : undefined,
+    actions: data.actions,
+    pins: data.pins,
+    plugins: existsSync(plugins) ? fileURLToPath(plugins) : undefined,
+  };
 }

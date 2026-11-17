@@ -86,7 +86,9 @@ export interface Config {
   parts?: {
     scenarios?: boolean;
     inspector?: boolean;
-    /** The QA agents: simpright apply enables the kit's plugin in .claude/settings.json. */
+    /** The CI part: simpright apply writes the workflows and dependabot.yml (src/generate.ts). */
+    ci?: boolean;
+    /** The QA agents: simpright apply writes the kit's simpright-qa plugin into .claude/ as plain files (src/plain.ts). */
     agents?: boolean;
     portal?: false | { testCases?: boolean; bugs?: boolean };
     coverage?: false | { package: string; registry?: string };

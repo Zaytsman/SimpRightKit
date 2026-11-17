@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // The simpright command. `simpright doctor` checks that a project's setup is consistent (src/doctor.ts lists the
-// checks); `simpright apply` writes the CI part's files and the agents part's entries from simpright.yml
-// (src/apply.ts); `init` and `upgrade` come later. Exits with 0 when it succeeds, 1 when a check fails or apply stops
-// on a conflict, and 2 on a usage error.
+// checks); `simpright apply` writes what the parts in simpright.yml ask for (src/apply.ts); `init` and `upgrade` come
+// later. Exits with 0 when it succeeds, 1 when a check fails or apply stops on a conflict, and 2 on a usage error.
 
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
@@ -12,17 +11,18 @@ import { doctor } from './doctor.ts';
 
 const USAGE = `usage: simpright doctor [--root <dir>] [--offline]
        simpright apply [--root <dir>] [--dry-run] [--force] [--kit-ref <commit>]
-  doctor     check simpright.yml, its paths and parts, the test runs against the workflows, the files apply
-             generates, the kit's actions, the agents plugin's entries, the core boundary and the core against
-             SimpRightTemplate
-  apply      write the CI part's files (the workflows and dependabot.yml) and, with parts.agents, the plugin's
-             entries in .claude/settings.json, from simpright.yml
+  doctor     check simpright.yml, its paths and how its parts fit together, the test runs against the workflows,
+             the files apply generates, the kit's actions, the agents' files, the kit's entries in package.json, the
+             core boundary and the core against SimpRightTemplate
+  apply      write what the parts in simpright.yml ask for: the workflows and dependabot.yml (parts.ci), the kit's
+             plugins as plain skills and agents in .claude/ (the QA agents with parts.agents), and the kit's packages
+             and scripts in package.json
   --root     the project's folder (default: the nearest folder up with simpright.yml)
   --offline  doctor: leave out the template check, the only one that needs the network
   --dry-run  apply: show the changes, write nothing
   --force    apply: also overwrite files or entries that apply didn't write or that changed since (read --dry-run's
              diff first)
-  --kit-ref  apply: the kit commit to pin the kit's actions to (default: this release's)`;
+  --kit-ref  apply, with parts.ci: the kit commit to pin the kit's actions to (default: this release's)`;
 
 /** Each command's own options: one given to the other command is a mistake, not a no-op. */
 const OPTIONS_OF: Record<string, string[]> = { doctor: ['offline'], apply: ['dry-run', 'force', 'kit-ref'] };

@@ -1,7 +1,9 @@
-// The agents part's entries in a project's .claude/settings.json (parts.agents): the kit's marketplace, simpright-kit,
-// from GitHub at the kit release's tag, and its plugin, simpright-qa, enabled. simpright apply writes the two entries and
-// simpright doctor checks them. The rest of the file is the project's own (other marketplaces and plugins, permissions,
-// hooks), and .claude/settings.local.json is each person's: apply touches neither.
+// The entries kit 0.3.0 wrote in a project's .claude/settings.json for the agents part: the kit's marketplace,
+// simpright-kit, from GitHub at the kit release's tag, and its plugin, simpright-qa, enabled. Since kit 0.4.0 the agents
+// are plain files in .claude/ (src/plain.ts), because a plugin a repository enables needs an install and a trusted
+// folder: simpright apply removes the entries it wrote, and simpright doctor reports the plugin enabled. The rest of
+// the file is the project's own (other marketplaces and plugins, permissions, hooks), and .claude/settings.local.json is
+// each person's: apply touches neither.
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
