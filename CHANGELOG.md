@@ -2,6 +2,11 @@
 
 The kit's packages share one version; each release lists what changed in each of them.
 
+## 0.4.0 (unreleased)
+
+- **@simpright/portal:** the dashboard's trend charts don't animate when the reader's system asks for reduced motion (`prefers-reduced-motion: reduce`).
+- **The kit's checks:** the portal's screenshot tests ask for reduced motion, so they compare the charts as drawn. The UI trends screenshot used to catch Chart.js partway through its animation (`animations: 'disabled'` stops only CSS and Web Animations), so it depended on timing. A test checks that the charts animate by default and don't under reduced motion.
+
 ## 0.3.0 (2026-11-08)
 
 The agents part: SimpRight's QA agents and skills as a Claude Code plugin, in the kit's own marketplace, and `simpright apply` to give a project the plugin. The agents' facts in `simpright.yml` move under `agents:`, which breaks the old layout. After upgrading a project:

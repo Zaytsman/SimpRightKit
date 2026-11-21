@@ -753,9 +753,12 @@
       };
     }
 
+    // A chart animates its lines in, unless the reader's system asks for reduced motion. The screenshot tests ask for
+    // it too, so they compare the charts as drawn, not a frame of their animation.
     function createChart(canvasId, labels, datasets, options) {
       const ctx = document.getElementById(canvasId).getContext('2d');
-      return new Chart(ctx, { type: 'line', data: { labels, datasets }, options });
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      return new Chart(ctx, { type: 'line', data: { labels, datasets }, options: reducedMotion ? { ...options, animation: false } : options });
     }
 
     function createDurationChart(canvasId, series) {
