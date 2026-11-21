@@ -32,6 +32,24 @@ async function openDashboard(page: Page, url: string) {
   await expect(page.locator('#history-list .run-empty'), 'The run history has loaded').toHaveCount(0);
 }
 
+/** The dashboard with the UI regression's trends open. */
+async function openUiTrends(page: Page) {
+  await openDashboard(page, SAMPLE);
+  await page.locator('button[data-trends="ui"]').click();
+  await expect(page.locator('#ui-charts canvas').first(), 'A trend chart').toBeVisible();
+}
+
+/** For each chart of the UI trends: null until Chart.js has drawn it, then whether it animates. */
+function uiChartsAnimate(page: Page) {
+  return page.locator('#ui-charts canvas').evaluateAll((canvases) => {
+    const chartJs = (globalThis as unknown as { Chart?: { getChart(canvas: unknown): { options: { animation: unknown } } | undefined } }).Chart;
+    return canvases.map((canvas) => {
+      const chart = chartJs?.getChart(canvas);
+      return chart ? chart.options.animation !== false : null;
+    });
+  });
+}
+
 test.describe('the dashboard', () => {
   test('names its layers and shows a card per regression', async ({ page }) => {
     await openDashboard(page, SAMPLE);
@@ -49,10 +67,18 @@ test.describe('the dashboard', () => {
     await expect(page).toHaveScreenshot('dashboard-desktop.png', { fullPage: true });
   });
 
+  test('animates its trend charts, unless the reader asks for reduced motion', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await openUiTrends(page);
+    await expect.poll(() => uiChartsAnimate(page), { message: 'Both charts animate' }).toEqual([true, true]);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openUiTrends(page);
+    await expect.poll(() => uiChartsAnimate(page), { message: 'Neither chart animates under reduced motion' }).toEqual([false, false]);
+  });
+
   test('looks the same with the UI trends open', async ({ page }) => {
-    await openDashboard(page, SAMPLE);
-    await page.locator('button[data-trends="ui"]').click();
-    await expect(page.locator('#ui-charts canvas').first(), 'A trend chart').toBeVisible();
+    await openUiTrends(page);
+    await expect.poll(() => uiChartsAnimate(page), { message: 'Both charts drawn, without animation (the config asks for reduced motion)' }).toEqual([false, false]);
     await expect(page.locator('#ui-trends')).toHaveScreenshot('dashboard-ui-trends.png');
   });
 

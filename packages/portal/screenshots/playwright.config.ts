@@ -23,6 +23,9 @@ export default defineConfig({
     // The pages format dates in the browser's locale and time zone.
     locale: 'en-US',
     timezoneId: 'UTC',
+    // The dashboard then draws its charts without animation. Chart.js animates from a script, which the screenshots'
+    // `animations: 'disabled'` doesn't stop, so a screenshot could catch a chart partway through.
+    reducedMotion: 'reduce',
   },
   expect: {
     toHaveScreenshot: { maxDiffPixelRatio: 0.01, animations: 'disabled' },
