@@ -1,0 +1,18 @@
+{
+  "name": "simpright",
+  "displayName": "SimpRight Setup",
+  "version": "0.3.0",
+  "description": "Sets up and checks a SimpRight Kit project (Playwright + TypeScript): the setup interview, simpright init and apply at your OK, a first test run, the project's README and CLAUDE.md, the GitHub settings, and a doctor that explains what's wrong.",
+  "author": {
+    "name": "Andrii Zaitsev"
+  },
+  "homepage": "https://github.com/Zaytsman/SimpRightKit/tree/main/plugins/simpright#readme",
+  "repository": "https://github.com/Zaytsman/SimpRightKit",
+  "license": "MIT",
+  "keywords": [
+    "simpright",
+    "playwright",
+    "test-automation",
+    "setup"
+  ]
+}

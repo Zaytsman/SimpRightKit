@@ -4,6 +4,11 @@
   "description": "The SimpRight Kit's Claude Code plugins, for projects built on the kit.",
   "plugins": [
     {
+      "name": "simpright",
+      "source": "./plugins/simpright",
+      "description": "Setup and doctor: the setup interview, simpright init and apply at your OK, a first test run, the project's README and CLAUDE.md, the GitHub settings, and a check that explains what's wrong."
+    },
+    {
       "name": "simpright-qa",
       "source": "./plugins/simpright-qa",
       "description": "QA agents and skills: analyse a story, write API contracts and test scenarios, automate them, review and heal the tests, record bugs."

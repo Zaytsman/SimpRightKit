@@ -388,7 +388,7 @@ describe("simpright doctor: the files apply generates and the kit's actions", ()
     assert.deepEqual(result.problems, []);
     // The kit's steps: setup, run-tests and publish-run; setup in pr-checks; setup and publish-pages; squash-pages.
     assert.ok(result.notes.includes(`Kit actions OK: 7 step(s) at v${VERSION}, commit bbbbbbb.`), result.notes.join('\n'));
-    assert.ok(result.notes.includes('Generated OK: 9 file(s) as simpright apply writes them (.simpright/state.json).'), result.notes.join('\n'));
+    assert.ok(result.notes.includes('Generated OK: 18 file(s) as simpright apply writes them (.simpright/state.json).'), result.notes.join('\n'));
     assert.ok(result.notes.includes("Package OK: package.json has the kit's packages and scripts as simpright apply writes them."), result.notes.join('\n'));
   });
 
@@ -492,7 +492,7 @@ describe('simpright doctor: the template check', () => {
       p.remove('src/core/types.ts');
     }, { fetch: stubFetch(files) });
     assertProblems(result, ['src/core/base.ts: differs (SimpRightTemplate v0.1.0)', 'src/core/helpers.ts: missing in the template (SimpRightTemplate v0.1.0)']);
-    assert.ok(result.hints.some((hint) => hint.startsWith('Port the change to the template')));
+    assert.ok(result.hints.some((hint) => hint.startsWith('Core files stay as SimpRightTemplate v0.1.0 ships them: undo the change')));
   });
 
   it('names an unknown tag once', async () => {

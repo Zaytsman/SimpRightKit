@@ -152,7 +152,9 @@ export async function doctor(root: string, config: Config, options: DoctorOption
       const outcome = await checkTemplate(config.template, core.files, exists, read, options.fetch ?? fetch);
       result.problems.push(...outcome.problems);
       if (outcome.problems.length > 0) {
-        result.hints.push(`Port the change to the template (https://github.com/${TEMPLATE_REPO}), tag a new version there, then set template in ${CONFIG_FILE}.`);
+        result.hints.push(
+          `Core files stay as SimpRightTemplate ${config.template} ships them: undo the change, or move the code into the project's own files. A change the core itself needs goes into the template first (https://github.com/${TEMPLATE_REPO}), in a version that template in ${CONFIG_FILE} then names.`,
+        );
       } else {
         result.notes.push(`Template OK: ${core.files.length} core file(s) match SimpRightTemplate ${config.template}.`);
       }

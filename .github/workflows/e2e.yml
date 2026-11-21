@@ -117,13 +117,22 @@ jobs:
           printf 'the test run\n' > "$src/Changed.md"
           touch -d '2026-01-01 00:00:00' "$src/Changed.md" "$wiki/Changed.md"
           printf 'new\n' > "$src/Added.md"
+          : > "$src/.gitkeep"
           printf 'old\n' > "$wiki/Removed.md"
           printf 'ref: refs/heads/master\n' > "$wiki/.git/HEAD"
+          # A new project's folder: only a .gitkeep, which must leave the wiki's hand-made first page alone.
+          empty="$RUNNER_TEMP/no-pages" first="$RUNNER_TEMP/wiki-first-page"
+          mkdir -p "$empty" "$first"
+          : > "$empty/.gitkeep"
+          printf 'first\n' > "$first/Home.md"
           bash actions/publish-wiki/sync-pages.sh "$src" "$wiki"
+          bash actions/publish-wiki/sync-pages.sh "$empty" "$first"
           failed=0
           [ "$(cat "$wiki/Changed.md")" = 'the test run' ] || { echo "::error::sync-pages kept a changed page of the same size and time"; failed=1; }
           [ -f "$wiki/Added.md" ] || { echo "::error::sync-pages didn't add a new page"; failed=1; }
           [ ! -e "$wiki/Removed.md" ] || { echo "::error::sync-pages didn't remove a deleted page"; failed=1; }
           [ -f "$wiki/.git/HEAD" ] || { echo "::error::sync-pages removed the wiki's .git"; failed=1; }
+          [ ! -e "$wiki/.gitkeep" ] || { echo "::error::sync-pages copied a .gitkeep"; failed=1; }
+          [ -f "$first/Home.md" ] && [ ! -e "$first/.gitkeep" ] || { echo "::error::sync-pages emptied the wiki from a folder without pages"; failed=1; }
           test "$failed" = 0
-          echo "sync-pages copies a changed page of the same size and time, adds and removes pages, and keeps .git."
+          echo "sync-pages copies a changed page of the same size and time, adds and removes pages, keeps .git, skips .gitkeep, and leaves the wiki alone without pages."

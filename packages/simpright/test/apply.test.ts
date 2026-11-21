@@ -59,6 +59,9 @@ const settingsChange = (result: ApplyResult) => changeOf(result, SETTINGS);
 const changesUnder = (result: ApplyResult, prefix: string) => result.changes.filter((change) => change.file.startsWith(prefix));
 /** The QA plugin's plain files, as apply writes them. */
 const QA_FILES = plainFiles(path.join(currentKit().plugins!, 'simpright-qa'));
+/** The setup plugin's plain files, which apply writes into every project. */
+const SETUP_FILES = plainFiles(path.join(currentKit().plugins!, 'simpright'));
+const SETUP_PATHS = SETUP_FILES.map(({ file }) => file);
 
 /** The sample turned into a project like SimpRight: a private coverage package, a wiki, the agents, a develop branch, named workflows. */
 function simprightLike(project: Project): void {
@@ -104,7 +107,8 @@ describe('simpright apply', () => {
       const ci = changesUnder(result, '.github/');
       assert.ok(ci.every((change) => change.action === 'create'));
       assertGolden(project, 'sample');
-      assert.deepEqual(Object.keys(readState(project.root)?.files ?? {}), ci.map((change) => change.file).sort());
+      assert.deepEqual(Object.keys(readState(project.root)?.files ?? {}).sort(), [...ci.map((change) => change.file), ...SETUP_PATHS].sort());
+      assert.deepEqual(changesUnder(result, '.claude/').map((change) => change.file), SETUP_PATHS, "the setup plugin's files, in every project");
       assert.equal(changeOf(result, 'package.json')?.action, 'update');
     } finally {
       project.dispose();
@@ -117,7 +121,7 @@ describe('simpright apply', () => {
       const result = run(project);
       assert.equal(result.written, true);
       assertGolden(project, 'simpright-like');
-      assert.equal(changesUnder(result, '.claude/').length, QA_FILES.length);
+      assert.equal(changesUnder(result, '.claude/').length, SETUP_FILES.length + QA_FILES.length);
       assert.equal(settingsChange(result), undefined);
     } finally {
       project.dispose();
@@ -205,7 +209,7 @@ describe('simpright apply', () => {
       // packages from the kit's folder, so a new version doesn't change it.
       assert.deepEqual(
         moved.changes.filter((change) => change.action === 'unchanged').map((change) => change.file),
-        ['.github/dependabot.yml', '.github/workflows/api-regression.yml', '.github/workflows/custom-ui.yml', '.github/workflows/smoke.yml', '.github/workflows/ui-regression.yml', 'package.json'],
+        ['.github/dependabot.yml', '.github/workflows/api-regression.yml', '.github/workflows/custom-ui.yml', '.github/workflows/smoke.yml', '.github/workflows/ui-regression.yml', ...SETUP_PATHS, 'package.json'],
       );
       assert.ok(moved.changes.every((change) => change.action === 'update' || change.action === 'unchanged'));
       assert.ok(project.read('.github/workflows/pr-checks.yml').includes(`Zaytsman/SimpRightKit/actions/setup@${'f'.repeat(40)} # v9.9.10`), 'the pins move to the new release');
@@ -294,7 +298,7 @@ describe('simpright apply: the QA plugin as plain files in .claude/', () => {
       const first = run(project);
       assert.equal(first.written, true);
       const written = changesUnder(first, '.claude/');
-      assert.deepEqual(written.map((change) => change.file), QA_FILES.map(({ file }) => file));
+      assert.deepEqual(written.map((change) => change.file), [...SETUP_PATHS, ...QA_FILES.map(({ file }) => file)]);
       assert.ok(written.every((change) => change.action === 'create'));
       const engineer = project.read('.claude/agents/simpright-qa-ui-test-engineer.md');
       assert.match(engineer, /^name: simpright-qa-ui-test-engineer$/m);
@@ -339,9 +343,9 @@ describe('simpright apply: the QA plugin as plain files in .claude/', () => {
       run(project);
       agentsOff(project);
       const removed = run(project);
-      assert.ok(changesUnder(removed, '.claude/').every((change) => change.action === 'delete'));
+      assert.ok(changesUnder(removed, '.claude/').every((change) => change.action === (SETUP_PATHS.includes(change.file) ? 'unchanged' : 'delete')));
       assert.equal(existsSync(path.join(project.root, '.claude/agents/simpright-qa-ui-test-engineer.md')), false);
-      assert.ok(Object.keys(readState(project.root)?.files ?? {}).every((file) => !file.startsWith('.claude/')));
+      assert.deepEqual(Object.keys(readState(project.root)?.files ?? {}).filter((file) => file.startsWith('.claude/')).sort(), [...SETUP_PATHS].sort(), "only the setup plugin's files stay");
 
       agentsOn(project);
       run(project);
@@ -436,7 +440,7 @@ describe('simpright apply: the parts', () => {
       assert.equal(result.written, true);
       assert.equal(result.kitRef, undefined);
       assert.equal(existsSync(path.join(project.root, '.github')), false);
-      assert.deepEqual(result.changes.map((change) => change.file), ['package.json']);
+      assert.deepEqual(result.changes.map((change) => change.file), [...SETUP_PATHS, 'package.json']);
       assert.equal(report(result, {})[0], 'simpright apply: kit 9.9.9');
     } finally {
       project.dispose();
@@ -452,7 +456,7 @@ describe('simpright apply: the parts', () => {
       assert.equal(removed.written, true);
       assert.equal(changesUnder(removed, '.github/').length, 9);
       assert.ok(changesUnder(removed, '.github/').every((change) => change.action === 'delete'));
-      assert.deepEqual(readState(project.root)?.files, {});
+      assert.deepEqual(Object.keys(readState(project.root)?.files ?? {}).sort(), [...SETUP_PATHS].sort(), "the setup plugin's files stay");
     } finally {
       project.dispose();
     }
@@ -621,7 +625,7 @@ describe('the simpright apply command', () => {
       const dry = cli(['apply', '--dry-run', '--kit-ref', REF, '--root', project.root]);
       assert.equal(dry.status, 0, dry.stderr);
       assert.match(dry.stdout, /^simpright apply: kit \d+\.\d+\.\d+, its actions at bbbbbbb\n {2}create {4}\.github\/dependabot\.yml\n/);
-      assert.match(dry.stdout, /Dry run, nothing written: 9 to create, 1 to update, 0 to delete\.\n$/);
+      assert.match(dry.stdout, /Dry run, nothing written: 18 to create, 1 to update, 0 to delete\.\n$/);
       assert.equal(cli(['apply', '--offline', '--root', project.root]).status, 2);
       assert.equal(cli(['doctor', '--dry-run', '--root', project.root]).status, 2);
       const noRef = cli(['apply', '--root', project.root]);
