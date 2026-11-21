@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "init-answers.schema.json",
+  "title": "simpright init answers",
+  "description": "What simpright init sets up in a fresh copy of SimpRightTemplate (simpright init --answers <file>). /simpright-setup writes these from its interview. Every key is optional: a missing one keeps the template's choice, so an empty file (or --defaults) changes nothing.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "layers": {
+      "description": "The layers the project tests. A layer left out loses its examples and its keys in simpright.yml (ids.layers, paths.<layer>Tests, agents.<layer>; for ui also parts.inspector and commands.inspectUi). The core keeps its files for both.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["api", "ui"] }
+    },
+    "app": {
+      "description": "The app under test: its URLs (src/envs/TEST.json) and the attribute it marks elements with for tests (src/config/project.ts).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "baseUrl": { "description": "The app's URL. An API-only project without one gets apiBaseUrl.", "$ref": "#/definitions/url" },
+        "apiBaseUrl": { "description": "The API's URL. A UI-only project without one gets baseUrl.", "$ref": "#/definitions/url" },
+        "testIdAttribute": { "description": "e.g. data-test, data-testid or data-qa.", "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$" }
+      }
+    },
+    "login": {
+      "description": "How a user logs in (src/config/project.ts). none: no login yet, so tests run logged out. bearer: an API login that returns a bearer token (and writes src/api/clients/AuthClient.ts). Any other login stays none here, and /simpright-setup writes it with you.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preset"],
+      "properties": {
+        "preset": { "enum": ["none", "bearer"] },
+        "path": { "description": "The login endpoint, relative to apiBaseUrl, e.g. /auth/login.", "type": "string", "pattern": "^/\\S*$" },
+        "body": {
+          "description": "The request body's fields and the user value each one takes, e.g. { email: username, password: password }.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/definitions/field" },
+          "additionalProperties": { "enum": ["username", "password"] }
+        },
+        "tokenField": { "description": "The response body's field with the token, e.g. access_token.", "$ref": "#/definitions/field" },
+        "expiresInSeconds": { "description": "How long a token lives, when the response doesn't say.", "type": "integer", "minimum": 1 },
+        "expiresInField": { "description": "The response body's field with the token's lifetime in seconds, e.g. expires_in.", "$ref": "#/definitions/field" },
+        "localStorageKey": { "description": "Where a logged-in page keeps the token (localStorage), so UI tests can start logged in. Without it, project.browserState stays a stub that says what to write.", "type": "string", "minLength": 1 }
+      },
+      "if": { "properties": { "preset": { "const": "bearer" } } },
+      "then": {
+        "required": ["path", "body", "tokenField"],
+        "oneOf": [{ "required": ["expiresInSeconds"] }, { "required": ["expiresInField"] }]
+      },
+      "else": { "maxProperties": 1 }
+    },
+    "roles": {
+      "description": "The roles tests act as, the first being the default (src/config/roles.ts; simpright.yml roles, with guest for logged-out tests). Each names its user's .env variables, written into src/envs/TEST.json (testUsers) and .env.example; {} for a role whose user is created per run.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$", "not": { "const": "guest" } },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "username": { "$ref": "#/definitions/variable" },
+          "password": { "$ref": "#/definitions/variable" }
+        },
+        "dependencies": { "username": ["password"], "password": ["username"] }
+      }
+    },
+    "examples": {
+      "description": "keep: the examples stay (those of the layers kept). remove: they go, and with the agents part they move to docs/exemplars/ as the agents' style exemplars.",
+      "enum": ["keep", "remove"]
+    },
+    "folders": {
+      "description": "Folders outside the core, relative to the project's root: an existing one moves, a new one is created. src/ and tests/ keep the template's layout.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scenarios": { "$ref": "#/definitions/folder" },
+        "bugs": { "$ref": "#/definitions/folder" },
+        "contracts": { "$ref": "#/definitions/folder" },
+        "userStories": { "$ref": "#/definitions/folder" },
+        "analysis": { "$ref": "#/definitions/folder" },
+        "wiki": { "$ref": "#/definitions/folder" }
+      }
+    },
+    "config": {
+      "description": "simpright.yml's own keys, each a complete value in its schema (ci with node and secrets, portal with a title), merged into the file: a mapping key by key, so the comments of what it keeps stay; a list or a value replaced.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "parts": { "$ref": "simpright.schema.json#/properties/parts" },
+        "ci": { "$ref": "simpright.schema.json#/properties/ci" },
+        "runs": { "$ref": "simpright.schema.json#/properties/runs" },
+        "portal": { "$ref": "simpright.schema.json#/properties/portal" }
+      }
+    }
+  },
+  "definitions": {
+    "url": { "type": "string", "pattern": "^https?://[^\\s/]+(/\\S*)?$" },
+    "field": { "type": "string", "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$" },
+    "variable": { "description": "An environment variable's name, e.g. ADMIN_PASSWORD.", "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+    "folder": { "type": "string", "pattern": "^(?![./])(?!.*(^|/)\\.\\.?(/|$))[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*$" }
+  }
+}

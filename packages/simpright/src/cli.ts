@@ -1,31 +1,41 @@
 #!/usr/bin/env node
-// The simpright command. `simpright doctor` checks that a project's setup is consistent (src/doctor.ts lists the
-// checks); `simpright apply` writes what the parts in simpright.yml ask for (src/apply.ts); `init` and `upgrade` come
-// later. Exits with 0 when it succeeds, 1 when a check fails or apply stops on a conflict, and 2 on a usage error.
+// The simpright command. `simpright init` sets up a fresh copy of SimpRightTemplate from an answers file
+// (src/init.ts); `simpright doctor` checks that a project's setup is consistent (src/doctor.ts lists the checks);
+// `simpright apply` writes what the parts in simpright.yml ask for (src/apply.ts); `upgrade` comes later. Exits with 0
+// when it succeeds, 1 when a check fails, apply stops on a conflict or init on a copy that isn't fresh, and 2 on a
+// usage error.
 
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
+import { readAnswers } from './answers.ts';
 import { apply, report } from './apply.ts';
 import { ConfigError, projectRoot, readConfig, UsageError } from './config.ts';
 import { doctor } from './doctor.ts';
+import { init, initReport } from './init.ts';
 
-const USAGE = `usage: simpright doctor [--root <dir>] [--offline]
+const USAGE = `usage: simpright init [--root <dir>] (--answers <file> | --defaults) [--dry-run]
+       simpright doctor [--root <dir>] [--offline]
        simpright apply [--root <dir>] [--dry-run] [--force] [--kit-ref <commit>]
-  doctor     check simpright.yml, its paths and how its parts fit together, the test runs against the workflows,
-             the files apply generates, the kit's actions, the agents' files, the kit's entries in package.json, the
-             core boundary and the core against SimpRightTemplate
-  apply      write what the parts in simpright.yml ask for: the workflows and dependabot.yml (parts.ci), the kit's
-             plugins as plain skills and agents in .claude/ (the QA agents with parts.agents), and the kit's packages
-             and scripts in package.json
-  --root     the project's folder (default: the nearest folder up with simpright.yml)
-  --offline  doctor: leave out the template check, the only one that needs the network
-  --dry-run  apply: show the changes, write nothing
-  --force    apply: also overwrite files or entries that apply didn't write or that changed since (read --dry-run's
-             diff first)
-  --kit-ref  apply, with parts.ci: the kit commit to pin the kit's actions to (default: this release's)`;
+  init        set up a fresh copy of SimpRightTemplate from an answers file (its schema: simpright's
+              init-answers.schema.json; /simpright-setup writes one): the layers, the app's URLs and test ids, a login
+              preset, the roles, the examples, the folders, and simpright.yml's parts, ci, runs and portal
+  doctor      check simpright.yml, its paths and how its parts fit together, the test runs against the workflows,
+              the files apply generates, the kit's actions, the agents' files, the kit's entries in package.json, the
+              core boundary and the core against SimpRightTemplate
+  apply       write what the parts in simpright.yml ask for: the workflows and dependabot.yml (parts.ci), the kit's
+              plugins as plain skills and agents in .claude/ (the QA agents with parts.agents), and the kit's packages
+              and scripts in package.json
+  --root      the project's folder (default: the nearest folder up with simpright.yml)
+  --answers   init: the answers file (YAML)
+  --defaults  init: keep the template as it is
+  --offline   doctor: leave out the template check, the only one that needs the network
+  --dry-run   init, apply: show the changes, write nothing
+  --force     apply: also overwrite files or entries that apply didn't write or that changed since (read --dry-run's
+              diff first)
+  --kit-ref   apply, with parts.ci: the kit commit to pin the kit's actions to (default: this release's)`;
 
-/** Each command's own options: one given to the other command is a mistake, not a no-op. */
-const OPTIONS_OF: Record<string, string[]> = { doctor: ['offline'], apply: ['dry-run', 'force', 'kit-ref'] };
+/** Each command's own options: one given to another command is a mistake, not a no-op. */
+const OPTIONS_OF: Record<string, string[]> = { init: ['answers', 'defaults', 'dry-run'], doctor: ['offline'], apply: ['dry-run', 'force', 'kit-ref'] };
 
 const version = () => (JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }).version;
 
@@ -38,6 +48,8 @@ async function main(argv: string[]): Promise<number> {
     allowPositionals: true,
     options: {
       root: { type: 'string' },
+      answers: { type: 'string' },
+      defaults: { type: 'boolean' },
       offline: { type: 'boolean' },
       'dry-run': { type: 'boolean' },
       force: { type: 'boolean' },
@@ -65,6 +77,13 @@ async function main(argv: string[]): Promise<number> {
   if (misplaced) throw new UsageError(`--${misplaced} isn't an option of simpright ${command}.`);
 
   const root = projectRoot(values.root);
+  if (command === 'init') {
+    if ((values.answers === undefined) === (values.defaults === undefined)) throw new UsageError('simpright init takes either --answers <file> or --defaults.');
+    const options = { dryRun: values['dry-run'] };
+    const result = await init(root, values.answers === undefined ? {} : readAnswers(values.answers), options);
+    for (const line of initReport(result, options)) console.log(line);
+    return result.problems.length > 0 ? 1 : 0;
+  }
   if (command === 'apply') {
     const options = { dryRun: values['dry-run'], force: values.force, kitRef: values['kit-ref'] };
     const result = apply(root, readConfig(root), options);

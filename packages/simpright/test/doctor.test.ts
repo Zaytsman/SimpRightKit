@@ -392,6 +392,15 @@ describe("simpright doctor: the files apply generates and the kit's actions", ()
     assert.ok(result.notes.includes("Package OK: package.json has the kit's packages and scripts as simpright apply writes them."), result.notes.join('\n'));
   });
 
+  it('passes a project without secrets, whose callers pass none, and still finds secrets: inherit', async () => {
+    const noSecrets = (p: Project) => p.edit('simpright.yml', 'secrets: [SHOP_USER, SHOP_PASSWORD]', 'secrets: []');
+    assert.deepEqual((await checkApplied(() => {}, { before: noSecrets })).problems, []);
+    const caller = '.github/workflows/ui-regression.yml';
+    const inherit = (p: Project) => p.edit(caller, '    uses: ./.github/workflows/playwright-run.yml\n', '    uses: ./.github/workflows/playwright-run.yml\n    secrets: inherit\n');
+    const result = await checkApplied(inherit, { before: noSecrets });
+    assert.ok(result.problems.includes(`${caller} (job tests): must pass the secrets none by name (ci.secrets; never secrets: inherit)`), result.problems.join('\n'));
+  });
+
   const applied: Case[] = [
     { name: 'a generated file changed by hand', change: (p) => p.edit('.github/workflows/pr-checks.yml', 'timeout-minutes: 15', 'timeout-minutes: 20'), expect: [`.github/workflows/pr-checks.yml: differs from what simpright apply writes (kit ${VERSION})`] },
     { name: 'a generated file deleted', change: (p) => p.remove(SQUASH), expect: [`${SQUASH}: missing: simpright apply writes it`] },

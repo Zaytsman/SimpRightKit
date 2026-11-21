@@ -142,6 +142,11 @@ export function readConfig(root: string): Config {
   } catch (error) {
     throw new ConfigError([`${CONFIG_FILE}: ${(error as NodeJS.ErrnoException).code === 'ENOENT' ? 'not found' : `invalid YAML: ${(error as Error).message}`}`]);
   }
+  return checkConfig(config);
+}
+
+/** Checks parsed simpright.yml data against simpright.schema.json, as readConfig() does; throws a ConfigError when it doesn't match. */
+export function checkConfig(config: unknown): Config {
   const moved = config !== null && typeof config === 'object' ? MOVED_TO_AGENTS.filter((key) => Object.hasOwn(config, key)) : [];
   if (moved.length > 0) throw new ConfigError(moved.map((key) => `${CONFIG_FILE}: ${key} moved to agents.${key} in kit 0.3.0`));
   const validate = new Ajv({ allErrors: true }).compile<Config>(JSON.parse(readFileSync(CONFIG_SCHEMA_FILE, 'utf8')));

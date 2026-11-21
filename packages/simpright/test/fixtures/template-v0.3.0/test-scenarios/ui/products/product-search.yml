@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=../../../node_modules/@simpright/scenarios/schemas/scenarios.schema.json
+suite: Product search
+tags: ["@products"]
+scenarios:
+  - id: UI-001
+    name: Search by name shows only matching products
+    tags: ["@smoke"]
+    status: automated
+    automatedIn: tests/ui/products/product-search.spec.ts
+    role: guest
+    preconditions:
+      - The home page is open.
+    steps:
+      - Search for "pliers".
+      - 'Verify the caption reads "Searched for: pliers".'
+      - Verify at least one product is shown.
+      - Verify every product name contains "pliers" (case-insensitive).
+  - id: UI-002
+    name: Search with a 3-character term is accepted
+    status: automated
+    automatedIn: tests/ui/products/product-search.spec.ts
+    role: guest
+    preconditions:
+      - The home page is open.
+    steps:
+      - Search for "ham".
+      - 'Verify the caption reads "Searched for: ham".'
+      - Verify at least one product is shown.
+      - Verify every product name contains "ham" (case-insensitive).
+  - id: UI-003
+    name: Search with a 40-character term is accepted
+    status: automated
+    automatedIn: tests/ui/products/product-search.spec.ts
+    role: guest
+    preconditions:
+      - The home page is open.
+    steps:
+      - Search for a term of exactly 40 characters.
+      - 'Verify the caption reads "Searched for: " followed by the term.'
+  - id: UI-004
+    name: Search with a 2-character term is rejected
+    status: automated
+    automatedIn: tests/ui/products/product-search.spec.ts
+    role: guest
+    preconditions:
+      - The home page is open.
+    steps:
+      - Search for "pl".
+      - 'Verify no "Searched for:" caption is shown.'
+      - Verify the product grid still shows the first page of all products.
+  - id: UI-005
+    name: Search with a 41-character term is rejected
+    status: automated
+    automatedIn: tests/ui/products/product-search.spec.ts
+    role: guest
+    preconditions:
+      - The home page is open.
+    steps:
+      - Search for a term of exactly 41 characters.
+      - 'Verify no "Searched for:" caption is shown.'
+      - Verify the product grid still shows the first page of all products.

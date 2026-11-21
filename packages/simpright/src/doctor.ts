@@ -38,7 +38,8 @@ import { kitEntries, PACKAGE_FILE, type Section } from './package-json.ts';
 import { partProblems } from './parts.ts';
 import { AGENTS_PLUGIN, plainFiles, pluginFiles } from './plain.ts';
 import { entriesOf, PLUGIN, readSettings, SETTINGS_FILE } from './settings.ts';
-import { readState, STATE_FILE, withoutRefs, type State } from './state.ts';
+import { readState, STATE_FILE, withLf, withoutRefs, type State } from './state.ts';
+import { EXEMPLARS_DIR, fetchTemplateFile, TEMPLATE_REPO } from './template.ts';
 import {
   ACTIONS_DIR,
   callersOf,
@@ -50,13 +51,11 @@ import {
   type WorkflowJob,
 } from './workflows.ts';
 
-/** The template's repository on GitHub; `template` in simpright.yml names one of its tags. */
-export const TEMPLATE_REPO = 'Zaytsman/SimpRightTemplate';
+export { TEMPLATE_REPO } from './template.ts';
 /** The kit's packages: one release gives them one version. */
 export const KIT_PACKAGES = ['simpright', '@simpright/scenarios', '@simpright/portal'];
 /** Runs a family keeps on the portal when its entry has no keep (the schema's default). */
 const DEFAULT_KEEP = 10;
-const FETCH_TIMEOUT_MS = 30_000;
 
 export interface DoctorOptions {
   /** Leave out the template check, the only one that needs the network. */
@@ -119,6 +118,16 @@ export async function doctor(root: string, config: Config, options: DoctorOption
     result.hints.push(`Run simpright apply: it writes the ${AGENTS_PLUGIN} plugin into .claude/ as plain skills and agents (parts.agents), and removes the ${SETTINGS_FILE} entries it wrote before kit 0.4.0.`);
   } else if (agents) {
     result.notes.push(agents);
+  }
+  const atExemplars = (['api', 'ui'] as const).flatMap((layer) =>
+    Object.entries(config.agents?.[layer]?.exemplars ?? {})
+      .filter(([, file]) => file.startsWith(`${EXEMPLARS_DIR}/`))
+      .map(([key]) => `agents.${layer}.exemplars.${key}`),
+  );
+  if (atExemplars.length > 0) {
+    result.notes.push(
+      `Exemplars: ${atExemplars.length} still point into ${EXEMPLARS_DIR}/ (the template's examples, which simpright init kept): point them at your own files once they exist, then delete the folder.`,
+    );
   }
 
   if (state?.packageJson) {
@@ -406,7 +415,9 @@ function checkRunsAndWorkflows(root: string, config: Config, kit: Kit, exists: E
     }
 
     const secrets = config.ci?.secrets;
-    if (secrets && (typeof job.secrets !== 'object' || job.secrets === null || !sameItems(Object.keys(job.secrets), secrets))) {
+    // No secrets: block passes none, which is right when ci.secrets is empty; `secrets: inherit` is never right.
+    const passed = job.secrets === undefined ? [] : typeof job.secrets === 'object' && job.secrets !== null ? Object.keys(job.secrets) : undefined;
+    if (secrets && (passed === undefined || !sameItems(passed, secrets))) {
       fail(where, `must pass the secrets ${listOf(secrets)} by name (ci.secrets; never secrets: inherit)`);
     }
   };
@@ -644,24 +655,12 @@ function checkCore(root: string, core: NonNullable<Config['core']>, exists: Exis
 
 // --- The template ---
 
-/** The text with CRLF line endings turned into LF, so a Windows checkout compares equal. */
-const normalize = (text: string) => text.replace(/\r\n/g, '\n');
-
 /** Compares every core file with the template's copy at `version`. */
 async function checkTemplate(version: string, files: string[], exists: Exists, read: Read, fetchFile: typeof fetch): Promise<{ problems: string[] }> {
-  /** The template's copy of `file` at the recorded version, or undefined when the tag has no such file (404). */
-  const fetchTemplateFile = async (file: string): Promise<string | undefined> => {
-    const url = `https://raw.githubusercontent.com/${TEMPLATE_REPO}/refs/tags/${version}/${file}`;
-    const response = await fetchFile(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    if (response.status === 404) return undefined;
-    if (!response.ok) throw new Error(`${url}: ${response.status} ${response.statusText}`);
-    return normalize(await response.text());
-  };
-
   /** What's wrong with `file`, or undefined when both copies match. */
   const compareFile = async (file: string): Promise<string | undefined> => {
-    const ours = exists(file) ? normalize(read(file)) : undefined;
-    const theirs = await fetchTemplateFile(file);
+    const ours = exists(file) ? withLf(read(file)) : undefined;
+    const theirs = await fetchTemplateFile(version, file, fetchFile);
     if (theirs === undefined) return 'missing in the template';
     if (ours === undefined) return 'missing here';
     return ours === theirs ? undefined : 'differs';

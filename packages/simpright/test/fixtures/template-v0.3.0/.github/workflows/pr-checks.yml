@@ -1,0 +1,51 @@
+name: PR Checks
+
+# Static checks (the `verify` job): typecheck, scenario validation and the project's setup (simpright doctor).
+# A main branch ruleset can require it. The tests run in tests.yml.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      # No dependency needs an install script.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Validate scenarios
+        run: npm run validate:scenarios
+
+      # simpright.yml and its paths, the workflows' Node version and what the core files import. --offline leaves out
+      # the check of the core files against SimpRightTemplate: this repository is the template, its own reference. In a
+      # project made from it, drop --offline to compare the core with the template version simpright.yml records.
+      - name: Check the project's setup
+        run: npm run doctor -- --offline

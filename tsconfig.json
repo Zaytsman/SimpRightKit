@@ -3,5 +3,7 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["packages/*/src", "packages/*/test", "packages/*/screenshots", "test", "scripts"]
+  "include": ["packages/*/src", "packages/*/test", "packages/*/screenshots", "test", "scripts"],
+  // A project's files that tests copy (a template's snapshot): they import a project's path aliases, not the kit's.
+  "exclude": ["packages/*/test/fixtures"]
 }

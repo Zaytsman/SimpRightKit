@@ -124,8 +124,7 @@
         },
         "areas": {
           "type": "array",
-          "description": "Area folder names under each layer, e.g. products.",
-          "minItems": 1,
+          "description": "Area folder names under each layer, e.g. products. Empty in a new project: each area is added with its first scenario.",
           "uniqueItems": true,
           "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
         },

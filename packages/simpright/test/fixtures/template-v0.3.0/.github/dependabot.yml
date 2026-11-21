@@ -1,0 +1,45 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # A new version is proposed only after 7 days, so a hijacked release has time to be caught and pulled.
+    # Security updates are not delayed.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      # The SimpRight Kit's packages are released together and pinned exactly: one PR moves them all, of any update
+      # type, so they keep one version (simpright doctor checks it).
+      simpright-kit:
+        patterns:
+          - "simpright"
+          - "@simpright/*"
+      # One PR for the other minor/patch bumps; major versions get their own PR. It leaves the kit's packages out:
+      # Dependabot puts a dependency in its most specific matching group, not the first, and ranks this group above
+      # the @simpright/* pattern, so without the exclusion it takes the scoped packages and splits the kit.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "simpright"
+          - "@simpright/*"
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    # The actions are pinned to commit SHAs with the version in a comment; Dependabot updates both.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci"
