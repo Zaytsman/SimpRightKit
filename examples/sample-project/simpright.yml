@@ -36,8 +36,8 @@ ids:
 
 roles: [default, guest]
 
-# The QA agents' facts. The sample keeps the agents part off (no parts.agents), so apply writes no
-# .claude/settings.json for it; the kit's tests turn it on where they need it.
+# The QA agents' facts. The sample keeps the agents part off (no parts.agents), so apply writes none of the QA
+# plugin's files into .claude/ for it; the kit's tests turn it on where they need it.
 agents:
   api:
     exemplars:
@@ -63,6 +63,7 @@ agents:
 
 parts:
   scenarios: true
+  ci: true
   portal: { testCases: true, bugs: true }
 
 core:

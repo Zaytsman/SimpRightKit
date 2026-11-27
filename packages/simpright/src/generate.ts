@@ -97,7 +97,6 @@ export function generateCi(root: string, config: Config, options: GenerateOption
       registry = { url: GITHUB_PACKAGES, scope, packageName: coverage.package };
     }
   }
-  if (config.parts?.wiki && !config.paths.wiki) problems.push('simpright.yml: parts.wiki needs paths.wiki, the folder of the wiki pages');
 
   const pinned = (action: string) => {
     const pin = options.kit.pins[action];

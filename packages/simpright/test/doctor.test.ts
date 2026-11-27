@@ -28,8 +28,11 @@ async function check(change: (project: Project) => void, options: DoctorOptions 
   }
 }
 
-/** Turns the agents part on in the sample, which has it off. */
-const agentsOn = (p: Project) => p.edit('simpright.yml', 'parts:\n  scenarios: true\n', 'parts:\n  scenarios: true\n  agents: true\n');
+/** Turns the agents part on in the sample, which has it off, with the page inspector its UI agents need. */
+const agentsOn = (p: Project) => {
+  p.edit('simpright.yml', 'parts:\n  scenarios: true\n', 'parts:\n  scenarios: true\n  inspector: true\n  agents: true\n');
+  p.edit('simpright.yml', '  runScenario: npx playwright test -g "{id}:"\n', '  runScenario: npx playwright test -g "{id}:"\n  inspectUi: npm run inspect:ui -- {path}\n');
+};
 /** The sample's .claude/settings.json with `marketplace` as the kit's marketplace's source and the plugin `enabled`. */
 const settingsWith = (p: Project, source: Record<string, unknown>, enabled: boolean) =>
   p.write('.claude/settings.json', `${JSON.stringify({ extraKnownMarketplaces: { 'simpright-kit': { source } }, enabledPlugins: { 'simpright-qa@simpright-kit': enabled } }, null, 2)}\n`);
@@ -249,38 +252,43 @@ const cases: Case[] = [
     expect: ['simpright.yml: parts.agents needs agents'],
   },
   {
-    name: "the agents part without the plugin's entries",
+    name: 'the agents part before apply wrote its files',
     change: agentsOn,
-    expect: ['.claude/settings.json: missing: parts.agents needs the simpright-kit marketplace declared there and simpright-qa@simpright-kit enabled'],
+    expect: [".claude: the simpright-qa plugin's plain files are missing"],
   },
   {
-    name: 'the marketplace at another tag, and the plugin off',
-    change: (p) => {
-      agentsOn(p);
-      settingsWith(p, { source: 'github', repo: 'Zaytsman/SimpRightKit', ref: 'v0.0.1' }, false);
-    },
-    expect: [
-      `.claude/settings.json: the simpright-kit marketplace is at v0.0.1, but the installed kit is ${VERSION}: its tag is v${VERSION}`,
-      ".claude/settings.json: doesn't enable simpright-qa@simpright-kit (enabledPlugins), which parts.agents needs",
-    ],
-  },
-  {
-    name: 'the marketplace from a local folder',
-    change: (p) => {
-      agentsOn(p);
-      settingsWith(p, { source: 'directory', path: '../SimpRightKit' }, true);
-    },
-    expect: ['.claude/settings.json: declares the simpright-kit marketplace from {"source":"directory","path":"../SimpRightKit"}, not from GitHub (Zaytsman/SimpRightKit)'],
-  },
-  {
-    name: 'the plugin enabled without parts.agents',
-    change: (p) => settingsWith(p, { source: 'github', repo: 'Zaytsman/SimpRightKit', ref: `v${VERSION}` }, true),
-    expect: ['.claude/settings.json: enables simpright-qa@simpright-kit, but parts.agents is off in simpright.yml'],
+    name: "the QA plugin enabled from the kit's marketplace, the way of kit 0.3.0",
+    change: (p) => settingsWith(p, { source: 'github', repo: 'Zaytsman/SimpRightKit', ref: 'v0.3.0' }, true),
+    expect: [".claude/settings.json: enables simpright-qa@simpright-kit, the kit's plugin from its marketplace: since kit 0.4.0 the agents are plain files in .claude/"],
   },
   {
     name: "a settings file that isn't strict JSON",
     change: (p) => p.write('.claude/settings.json', '{ "enabledPlugins": {}, }\n'),
     expect: ['.claude/settings.json: invalid JSON'],
+  },
+  // How the parts fit together
+  {
+    name: 'runs in a config from before kit 0.4.0, without parts.ci',
+    change: (p) => p.edit('simpright.yml', '  ci: true\n', ''),
+    expect: ['simpright.yml: parts.ci: since kit 0.4.0 simpright apply writes the workflows only with parts.ci: true'],
+  },
+  {
+    name: 'runs and the portal with the CI part off',
+    change: (p) => p.edit('simpright.yml', '  ci: true\n', '  ci: false\n'),
+    expect: ['simpright.yml: runs need parts.ci', 'simpright.yml: parts.portal needs parts.ci'],
+  },
+  {
+    name: 'the UI agents without the page inspector',
+    change: (p) => {
+      agentsOn(p);
+      p.edit('simpright.yml', '  inspector: true\n', '');
+    },
+    expect: ['simpright.yml: agents.ui needs parts.inspector'],
+  },
+  {
+    name: 'the inspector without its command',
+    change: (p) => p.edit('simpright.yml', 'parts:\n  scenarios: true\n', 'parts:\n  scenarios: true\n  inspector: true\n'),
+    expect: ['simpright.yml: parts.inspector needs commands.inspectUi'],
   },
 ];
 
@@ -380,7 +388,17 @@ describe("simpright doctor: the files apply generates and the kit's actions", ()
     assert.deepEqual(result.problems, []);
     // The kit's steps: setup, run-tests and publish-run; setup in pr-checks; setup and publish-pages; squash-pages.
     assert.ok(result.notes.includes(`Kit actions OK: 7 step(s) at v${VERSION}, commit bbbbbbb.`), result.notes.join('\n'));
-    assert.ok(result.notes.includes('Generated OK: 9 file(s) as simpright apply writes them (.simpright/state.json).'), result.notes.join('\n'));
+    assert.ok(result.notes.includes('Generated OK: 18 file(s) as simpright apply writes them (.simpright/state.json).'), result.notes.join('\n'));
+    assert.ok(result.notes.includes("Package OK: package.json has the kit's packages and scripts as simpright apply writes them."), result.notes.join('\n'));
+  });
+
+  it('passes a project without secrets, whose callers pass none, and still finds secrets: inherit', async () => {
+    const noSecrets = (p: Project) => p.edit('simpright.yml', 'secrets: [SHOP_USER, SHOP_PASSWORD]', 'secrets: []');
+    assert.deepEqual((await checkApplied(() => {}, { before: noSecrets })).problems, []);
+    const caller = '.github/workflows/ui-regression.yml';
+    const inherit = (p: Project) => p.edit(caller, '    uses: ./.github/workflows/playwright-run.yml\n', '    uses: ./.github/workflows/playwright-run.yml\n    secrets: inherit\n');
+    const result = await checkApplied(inherit, { before: noSecrets });
+    assert.ok(result.problems.includes(`${caller} (job tests): must pass the secrets none by name (ci.secrets; never secrets: inherit)`), result.problems.join('\n'));
   });
 
   const applied: Case[] = [
@@ -403,6 +421,16 @@ describe("simpright doctor: the files apply generates and the kit's actions", ()
     { name: 'a kit action input the action lacks', change: (p) => p.edit(SQUASH, 'token: ${{ github.token }}', 'tokn: ${{ github.token }}'), expect: [`${SQUASH} (job squash): passes tokn to Zaytsman/SimpRightKit/actions/squash-pages, which has no such input (the kit's actions/squash-pages/action.yml)`, 'must pass token to Zaytsman/SimpRightKit/actions/squash-pages'] },
     { name: 'a kit action that the kit lacks', change: (p) => p.edit(SQUASH, SQUASH_PIN, `squash-pagez@${COMMIT} # v${VERSION}`), expect: [`uses Zaytsman/SimpRightKit/actions/squash-pagez@${COMMIT}, but kit ${VERSION} has no such action`] },
     { name: "another Node version through the kit's setup", change: (p) => p.edit('.github/workflows/pr-checks.yml', 'node-version: 24', 'node-version: 22'), expect: ['.github/workflows/pr-checks.yml (job verify): sets up Node 22, but ci.node in simpright.yml is 24'] },
+    {
+      name: "a kit script changed by hand",
+      change: (p) => p.edit('package.json', '"doctor": "simpright doctor"', '"doctor": "simpright doctor --offline"'),
+      expect: ['package.json: scripts.doctor: is "simpright doctor --offline", but simpright apply writes "simpright doctor"'],
+    },
+    {
+      name: "a kit package pinned at another version than the installed one",
+      change: (p) => p.edit('package.json', '"simpright": "file:../../packages/simpright"', '"simpright": "0.0.1"'),
+      expect: [`package.json: devDependencies.simpright: pins 0.0.1, but the installed kit is ${VERSION}: run npm install`],
+    },
   ];
   for (const testCase of applied) {
     it(`finds ${testCase.name}`, async () => assertProblems(await checkApplied(testCase.change), testCase.expect, testCase.unexpected));
@@ -421,13 +449,15 @@ describe("simpright doctor: the files apply generates and the kit's actions", ()
   it('passes the agents part after apply', async () => {
     const result = await checkApplied(() => {}, { before: agentsOn });
     assert.deepEqual(result.problems, []);
-    assert.ok(result.notes.includes(`Agents OK: .claude/settings.json enables simpright-qa@simpright-kit, with the kit's marketplace at v${VERSION}.`), result.notes.join('\n'));
+    assert.ok(result.notes.includes("Agents OK: .claude/ has the simpright-qa plugin's 14 skill(s) and 9 agent(s)."), result.notes.join('\n'));
+    assert.ok(result.notes.some((note) => /^Generated OK: \d+ file\(s\)/.test(note) && !note.startsWith('Generated OK: 9 ')), result.notes.join('\n'));
   });
 
-  it("finds the kit's marketplace at another release than the installed packages, and says to run apply", async () => {
-    const result = await checkApplied(() => {}, { before: agentsOn, applyKit: { ...RELEASE, version: '0.0.9' } });
-    assertProblems(result, [`.claude/settings.json: the simpright-kit marketplace is at v0.0.9, but the installed kit is ${VERSION}: its tag is v${VERSION}`]);
-    assert.ok(result.hints.some((hint) => hint.includes("it writes the simpright-qa@simpright-kit plugin's entries")), result.hints.join('\n'));
+  it('finds a plain file of the QA plugin changed by hand, and says to run apply', async () => {
+    const file = '.claude/agents/simpright-qa-test-reviewer.md';
+    const result = await checkApplied((p) => p.write(file, `${p.read(file)}\nAlso check the comments.\n`), { before: agentsOn });
+    assertProblems(result, [`${file}: differs from what simpright apply writes (kit ${VERSION})`]);
+    assert.ok(result.hints.some((hint) => hint.includes("the plugins' files in .claude/")), result.hints.join('\n'));
   });
 });
 
@@ -462,7 +492,7 @@ describe('simpright doctor: the template check', () => {
       p.remove('src/core/types.ts');
     }, { fetch: stubFetch(files) });
     assertProblems(result, ['src/core/base.ts: differs (SimpRightTemplate v0.1.0)', 'src/core/helpers.ts: missing in the template (SimpRightTemplate v0.1.0)']);
-    assert.ok(result.hints.some((hint) => hint.startsWith('Port the change to the template')));
+    assert.ok(result.hints.some((hint) => hint.startsWith('Core files stay as SimpRightTemplate v0.1.0 ships them: undo the change')));
   });
 
   it('names an unknown tag once', async () => {

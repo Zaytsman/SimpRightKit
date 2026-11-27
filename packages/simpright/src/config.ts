@@ -86,7 +86,9 @@ export interface Config {
   parts?: {
     scenarios?: boolean;
     inspector?: boolean;
-    /** The QA agents: simpright apply enables the kit's plugin in .claude/settings.json. */
+    /** The CI part: simpright apply writes the workflows and dependabot.yml (src/generate.ts). */
+    ci?: boolean;
+    /** The QA agents: simpright apply writes the kit's simpright-qa plugin into .claude/ as plain files (src/plain.ts). */
     agents?: boolean;
     portal?: false | { testCases?: boolean; bugs?: boolean };
     coverage?: false | { package: string; registry?: string };
@@ -140,6 +142,11 @@ export function readConfig(root: string): Config {
   } catch (error) {
     throw new ConfigError([`${CONFIG_FILE}: ${(error as NodeJS.ErrnoException).code === 'ENOENT' ? 'not found' : `invalid YAML: ${(error as Error).message}`}`]);
   }
+  return checkConfig(config);
+}
+
+/** Checks parsed simpright.yml data against simpright.schema.json, as readConfig() does; throws a ConfigError when it doesn't match. */
+export function checkConfig(config: unknown): Config {
   const moved = config !== null && typeof config === 'object' ? MOVED_TO_AGENTS.filter((key) => Object.hasOwn(config, key)) : [];
   if (moved.length > 0) throw new ConfigError(moved.map((key) => `${CONFIG_FILE}: ${key} moved to agents.${key} in kit 0.3.0`));
   const validate = new Ajv({ allErrors: true }).compile<Config>(JSON.parse(readFileSync(CONFIG_SCHEMA_FILE, 'utf8')));

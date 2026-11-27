@@ -38,7 +38,7 @@ npx simpright apply --dry-run   # show the changes
 npx simpright apply             # write them
 ```
 
-From `simpright.yml` (the [`simpright`](../packages/simpright) package documents the keys):
+From `simpright.yml` (the [`simpright`](../packages/simpright) package documents the keys), when it turns the CI part on (`parts.ci: true`, which needs `ci`: the branches, the Node version and the secrets). Without the CI part, `apply` writes none of these and removes the ones it wrote, so a project can keep CI of its own and still use the kit's other parts.
 
 | File | When | What |
 |---|---|---|
@@ -69,4 +69,4 @@ The kit's actions and the generated workflows follow these rules; a workflow you
 
 ## How the kit tests them
 
-The kit's [e2e workflow](../.github/workflows/e2e.yml) runs these actions on the sample project on every pull request and push to `main`. It installs the sample, runs its smoke tests and the step-title check, publishes the run and the pages to the kit's own `gh-pages` branch (which nothing serves), checks the files there, then squashes the branch and checks it's one commit with the same files. `publish-wiki` itself is left out, since it would overwrite the kit's wiki: the e2e checks its page copy (`sync-pages.sh`) on two temporary folders, including a changed page with the same size and modification time as the wiki's copy.
+The kit's [e2e workflow](../.github/workflows/e2e.yml) runs these actions on the sample project on every pull request and push to `main`. It installs the sample, runs its smoke tests and the step-title check, publishes the run and the pages to the kit's own `gh-pages` branch (which nothing serves), checks the files there, then squashes the branch and checks it's one commit with the same files. `publish-wiki` itself is left out, since it would overwrite the kit's wiki: the e2e checks its page copy (`sync-pages.sh`) on temporary folders, including a changed page with the same size and modification time as the wiki's copy, and a folder with no pages yet, which leaves the wiki as it is.

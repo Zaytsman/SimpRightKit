@@ -1,9 +1,9 @@
 // `simpright doctor`: checks that a project's setup is consistent. The scenarios and bugs have their own check
 // (`simpright-scenarios validate`); this one covers the rest:
 // - simpright.yml matches simpright.schema.json (readConfig), and every path it names exists (except
-//   paths.coverageSummary, which a test run generates, and paths.appSource, a checkout CI doesn't have); a portal
-//   (parts.portal) needs runs and a portal section, and its Bugs page needs paths.bugs; portal.titleAccent is the end
-//   of portal.title; the agents (parts.agents) need their facts (agents);
+//   paths.coverageSummary, which a test run generates, and paths.appSource, a checkout CI doesn't have); the parts it
+//   turns on fit together (src/parts.ts: runs need parts.ci, the portal needs runs and a portal section, the agents
+//   need their facts, ...); portal.titleAccent is the end of portal.title;
 // - the kit's packages that are installed share one version (one kit release);
 // - every run (runs) has exactly one caller of .github/workflows/playwright-run.yml, with the run's id as its
 //   family, and the caller matches the run: project, grep, paths, schedule, a manual start (workflow_dispatch),
@@ -16,10 +16,12 @@
 //   installed kit's, at its release commit when this simpright knows it (a published package);
 // - every actions/setup-node step, in a workflow or in an action it uses, sets up ci.node (an action's step that reads
 //   the version from an input: as each workflow step that uses the action passes it), and at least one does;
-// - when simpright apply has run (.simpright/state.json), the files it generates are what it would write now, apart
-//   from the pins, and none it no longer writes is left;
-// - with parts.agents, .claude/settings.json declares the kit's marketplace from GitHub at the installed kit's tag and
-//   enables its simpright-qa plugin; without it, the plugin isn't enabled there;
+// - when simpright apply has run (.simpright/state.json), the files it generates (the CI part's workflows, the
+//   plugins' plain files in .claude/) are what it would write now, apart from the pins, none it no longer writes is
+//   left, and the kit's entries in package.json are what it writes (a pin the installed kit doesn't match says to run
+//   npm install);
+// - with parts.agents, .claude/ has the simpright-qa plugin's plain skills and agents; .claude/settings.json doesn't
+//   enable the plugin from the kit's marketplace (kit 0.3.0's way: apply removes the entries it wrote);
 // - every core file and seam (core) exists, and a core code file imports only core files, the seams and packages
 //   (relative imports and the tsconfig.json path aliases are followed; comments are skipped; a document such as
 //   the conventions isn't scanned);
@@ -31,9 +33,13 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { CONFIG_FILE, ConfigError, type Config, type Run } from './config.ts';
 import { generateCi, type GeneratedFile } from './generate.ts';
-import { currentKit, KIT_ACTIONS, KIT_REPO, type Kit } from './kit.ts';
-import { entriesOf, MARKETPLACE, marketplaceSource, PLUGIN, readSettings, SETTINGS_FILE } from './settings.ts';
-import { readState, STATE_FILE, withoutRefs } from './state.ts';
+import { currentKit, KIT_ACTIONS, type Kit } from './kit.ts';
+import { kitEntries, PACKAGE_FILE, type Section } from './package-json.ts';
+import { partProblems } from './parts.ts';
+import { AGENTS_PLUGIN, plainFiles, pluginFiles } from './plain.ts';
+import { entriesOf, PLUGIN, readSettings, SETTINGS_FILE } from './settings.ts';
+import { readState, STATE_FILE, withLf, withoutRefs, type State } from './state.ts';
+import { EXEMPLARS_DIR, fetchTemplateFile, TEMPLATE_REPO } from './template.ts';
 import {
   ACTIONS_DIR,
   callersOf,
@@ -45,13 +51,11 @@ import {
   type WorkflowJob,
 } from './workflows.ts';
 
-/** The template's repository on GitHub; `template` in simpright.yml names one of its tags. */
-export const TEMPLATE_REPO = 'Zaytsman/SimpRightTemplate';
+export { TEMPLATE_REPO } from './template.ts';
 /** The kit's packages: one release gives them one version. */
 export const KIT_PACKAGES = ['simpright', '@simpright/scenarios', '@simpright/portal'];
 /** Runs a family keeps on the portal when its entry has no keep (the schema's default). */
 const DEFAULT_KEEP = 10;
-const FETCH_TIMEOUT_MS = 30_000;
 
 export interface DoctorOptions {
   /** Leave out the template check, the only one that needs the network. */
@@ -78,7 +82,8 @@ export async function doctor(root: string, config: Config, options: DoctorOption
   const exists = (file: string) => existsSync(path.join(root, file));
   const read = (file: string) => readFileSync(path.join(root, file), 'utf8');
 
-  checkConfig(config, exists, fail);
+  const state = readState(root);
+  checkConfig(config, exists, fail, Object.keys(state?.files ?? {}));
   // The other checks read the files the config names.
   if (result.problems.length > 0) return result;
   result.notes.push(`Config OK: ${CONFIG_FILE} matches its schema, and every path it names exists.`);
@@ -98,21 +103,37 @@ export async function doctor(root: string, config: Config, options: DoctorOption
   }
 
   const beforeGenerated = result.problems.length;
-  const generated = checkGenerated(root, config, kit, exists, read, fail);
+  const generated = checkGenerated(root, config, kit, state, exists, read, fail);
   if (generated !== undefined) {
     if (result.problems.length === beforeGenerated) {
-      result.notes.push(`Generated OK: ${generated} file(s) as simpright apply writes them (${STATE_FILE}).`);
+      if (generated > 0) result.notes.push(`Generated OK: ${generated} file(s) as simpright apply writes them (${STATE_FILE}).`);
     } else {
-      result.hints.push(`Run simpright apply: it writes the CI part's files from ${CONFIG_FILE} (a changed config, a new test folder or a new kit version changes them).`);
+      result.hints.push(`Run simpright apply: it writes the CI part's workflows and the plugins' files in .claude/ from ${CONFIG_FILE} (a changed config, a new test folder or a new kit version changes them).`);
     }
   }
 
   const beforeAgents = result.problems.length;
-  const agents = checkAgentsPart(root, config, installed?.version ?? kit.version, fail);
+  const agents = checkAgentsPart(root, config, kit, state, exists, fail);
   if (result.problems.length > beforeAgents) {
-    if (config.parts?.agents) result.hints.push(`Run simpright apply: it writes the ${PLUGIN} plugin's entries in ${SETTINGS_FILE} from parts.agents, with the marketplace at the installed kit's tag (a new kit version moves it).`);
+    result.hints.push(`Run simpright apply: it writes the ${AGENTS_PLUGIN} plugin into .claude/ as plain skills and agents (parts.agents), and removes the ${SETTINGS_FILE} entries it wrote before kit 0.4.0.`);
   } else if (agents) {
     result.notes.push(agents);
+  }
+  const atExemplars = (['api', 'ui'] as const).flatMap((layer) =>
+    Object.entries(config.agents?.[layer]?.exemplars ?? {})
+      .filter(([, file]) => file.startsWith(`${EXEMPLARS_DIR}/`))
+      .map(([key]) => `agents.${layer}.exemplars.${key}`),
+  );
+  if (atExemplars.length > 0) {
+    result.notes.push(
+      `Exemplars: ${atExemplars.length} still point into ${EXEMPLARS_DIR}/ (the template's examples, which simpright init kept): point them at your own files once they exist, then delete the folder.`,
+    );
+  }
+
+  if (state?.packageJson) {
+    const beforePackage = result.problems.length;
+    checkPackageJson(config, installed?.version ?? kit.version, exists, read, fail);
+    if (result.problems.length === beforePackage) result.notes.push(`Package OK: ${PACKAGE_FILE} has the kit's packages and scripts as simpright apply writes them.`);
   }
 
   const { core } = config;
@@ -131,7 +152,9 @@ export async function doctor(root: string, config: Config, options: DoctorOption
       const outcome = await checkTemplate(config.template, core.files, exists, read, options.fetch ?? fetch);
       result.problems.push(...outcome.problems);
       if (outcome.problems.length > 0) {
-        result.hints.push(`Port the change to the template (https://github.com/${TEMPLATE_REPO}), tag a new version there, then set template in ${CONFIG_FILE}.`);
+        result.hints.push(
+          `Core files stay as SimpRightTemplate ${config.template} ships them: undo the change, or move the code into the project's own files. A change the core itself needs goes into the template first (https://github.com/${TEMPLATE_REPO}), in a version that template in ${CONFIG_FILE} then names.`,
+        );
       } else {
         result.notes.push(`Template OK: ${core.files.length} core file(s) match SimpRightTemplate ${config.template}.`);
       }
@@ -149,7 +172,7 @@ const listOf = (items: string[]) => items.join(', ') || 'none';
 
 // --- The config ---
 
-function checkConfig(config: Config, exists: Exists, fail: Fail): void {
+function checkConfig(config: Config, exists: Exists, fail: Fail, recorded: string[]): void {
   const { paths } = config;
   const configPaths: [string, string][] = [
     ...config.project.conventions.map((file, i): [string, string] => [`project.conventions[${i}]`, file]),
@@ -162,14 +185,7 @@ function checkConfig(config: Config, exists: Exists, fail: Fail): void {
   for (const [key, file] of configPaths) {
     if (!exists(file)) fail(CONFIG_FILE, `${key}: ${file} doesn't exist`);
   }
-  if (config.parts?.agents && !config.agents) {
-    fail(CONFIG_FILE, 'parts.agents needs agents: the facts the QA agents read (agents.liveApi, and agents.api or agents.ui for the layers the project tests)');
-  }
-  if (config.parts?.portal) {
-    if (!config.runs) fail(CONFIG_FILE, 'parts.portal needs runs: the portal publishes the reports of the test runs');
-    if (!config.portal) fail(CONFIG_FILE, 'parts.portal needs portal: the pages take their title from it');
-    if (config.parts.portal.bugs && !paths.bugs) fail(CONFIG_FILE, 'parts.portal.bugs needs paths.bugs');
-  }
+  for (const problem of partProblems(config, recorded)) fail(CONFIG_FILE, problem.slice(`${CONFIG_FILE}: `.length));
   const accent = config.portal?.titleAccent;
   if (accent && !config.portal?.title.endsWith(accent)) {
     fail(CONFIG_FILE, `portal.titleAccent must be the end of portal.title (${config.portal?.title})`);
@@ -241,17 +257,16 @@ function checkKitPins(root: string, version: string, kit: Kit, read: Read, fail:
 }
 
 /**
- * When simpright apply has run (.simpright/state.json), checks that the files it generates are what it would write now
- * (apart from the pins) and that none it no longer writes is left. Returns the number of generated files, or undefined
- * when apply hasn't run here.
+ * When simpright apply has run (.simpright/state.json), checks that the files it generates (the CI part's, the
+ * plugins' plain files) are what it would write now (apart from the pins) and that none it no longer writes is left.
+ * Returns the number of generated files, or undefined when apply hasn't run here.
  */
-function checkGenerated(root: string, config: Config, kit: Kit, exists: Exists, read: Read, fail: Fail): number | undefined {
-  const state = readState(root);
+function checkGenerated(root: string, config: Config, kit: Kit, state: State | undefined, exists: Exists, read: Read, fail: Fail): number | undefined {
   if (!state) return undefined;
   let files: GeneratedFile[];
   try {
     // The pins don't count, so any commit does.
-    files = generateCi(root, config, { kit, kitRef: '0'.repeat(40) });
+    files = [...(config.parts?.ci ? generateCi(root, config, { kit, kitRef: '0'.repeat(40) }) : []), ...pluginFiles(config, kit)];
   } catch (error) {
     if (!(error instanceof ConfigError)) throw error;
     for (const problem of error.problems) {
@@ -273,11 +288,11 @@ function checkGenerated(root: string, config: Config, kit: Kit, exists: Exists, 
 // --- The agents part ---
 
 /**
- * Checks the plugin's entries in .claude/settings.json against parts.agents: with it on, the kit's marketplace from
- * GitHub at the tag of kit `version` (the installed one) and the plugin enabled; with it off, the plugin not enabled.
- * Returns the note for a passed check when parts.agents is on.
+ * Checks the agents part: .claude/settings.json doesn't enable the QA plugin from the kit's marketplace (kit 0.3.0's
+ * way, which needs an install and a trusted folder), and with parts.agents, before apply has run here, the plugin's
+ * plain files exist (after it, checkGenerated compares them). Returns the note for a passed check when parts.agents is on.
  */
-function checkAgentsPart(root: string, config: Config, version: string, fail: Fail): string | undefined {
+function checkAgentsPart(root: string, config: Config, kit: Kit, state: State | undefined, exists: Exists, fail: Fail): string | undefined {
   let settings: ReturnType<typeof readSettings>;
   try {
     settings = readSettings(root);
@@ -289,26 +304,38 @@ function checkAgentsPart(root: string, config: Config, version: string, fail: Fa
     }
     return undefined;
   }
-  const { marketplace, plugin } = entriesOf(settings?.settings);
-  if (!config.parts?.agents) {
-    if (plugin === true) fail(SETTINGS_FILE, `enables ${PLUGIN}, but parts.agents is off in ${CONFIG_FILE}: turn it on, or remove the plugin's entries`);
-    return undefined;
+  if (entriesOf(settings?.settings).plugin === true) {
+    fail(SETTINGS_FILE, `enables ${PLUGIN}, the kit's plugin from its marketplace: since kit 0.4.0 the agents are plain files in .claude/, which load without an install or a trusted folder`);
   }
-  if (!settings) {
-    fail(SETTINGS_FILE, `missing: parts.agents needs the ${MARKETPLACE} marketplace declared there and ${PLUGIN} enabled`);
-    return undefined;
+  if (!config.parts?.agents) return undefined;
+  const files = kit.plugins ? plainFiles(path.join(kit.plugins, AGENTS_PLUGIN)) : [];
+  if (!state) {
+    const missing = files.filter(({ file }) => !exists(file));
+    if (missing.length > 0) fail('.claude', `the ${AGENTS_PLUGIN} plugin's plain files are missing (${missing.length} of ${files.length}): parts.agents needs them`);
   }
-  const { ref } = marketplaceSource(version);
-  const source = (marketplace as { source?: Record<string, unknown> } | undefined)?.source;
-  if (marketplace === undefined) {
-    fail(SETTINGS_FILE, `doesn't declare the ${MARKETPLACE} marketplace (extraKnownMarketplaces), which parts.agents needs`);
-  } else if (source?.source !== 'github' || source.repo !== KIT_REPO) {
-    fail(SETTINGS_FILE, `declares the ${MARKETPLACE} marketplace from ${JSON.stringify(source ?? null)}, not from GitHub (${KIT_REPO})`);
-  } else if (source.ref !== ref) {
-    fail(SETTINGS_FILE, `the ${MARKETPLACE} marketplace is at ${source.ref === undefined ? 'its default branch' : String(source.ref)}, but the installed kit is ${version}: its tag is ${ref}`);
+  const count = (folder: string) => new Set(files.filter(({ file }) => file.startsWith(folder)).map(({ file }) => file.split('/')[2])).size;
+  return `Agents OK: .claude/ has the ${AGENTS_PLUGIN} plugin's ${count('.claude/skills/')} skill(s) and ${count('.claude/agents/')} agent(s).`;
+}
+
+// --- package.json ---
+
+/**
+ * Checks the kit's entries in package.json (once apply has written them): the packages at the installed kit's version
+ * (a kit package from a local folder, file: or link:, counts) and the scripts as apply writes them.
+ */
+function checkPackageJson(config: Config, version: string, exists: Exists, read: Read, fail: Fail): void {
+  if (!exists(PACKAGE_FILE)) return;
+  const json = JSON.parse(read(PACKAGE_FILE)) as Partial<Record<Section, Record<string, string>>>;
+  const wanted = kitEntries(config, version);
+  for (const [name, value] of Object.entries(wanted.devDependencies)) {
+    const now = json.devDependencies?.[name];
+    if (now === value || /^(?:file|link):/.test(now ?? '')) continue;
+    fail(PACKAGE_FILE, now === undefined ? `devDependencies.${name}: missing: simpright apply adds it (${value})` : `devDependencies.${name}: pins ${now}, but the installed kit is ${version}: run npm install (for the pinned version) or simpright apply (for the installed one)`);
   }
-  if (plugin !== true) fail(SETTINGS_FILE, `doesn't enable ${PLUGIN} (enabledPlugins), which parts.agents needs`);
-  return `Agents OK: ${SETTINGS_FILE} enables ${PLUGIN}, with the kit's marketplace at ${ref}.`;
+  for (const [name, value] of Object.entries(wanted.scripts)) {
+    const now = json.scripts?.[name];
+    if (now !== value) fail(PACKAGE_FILE, `scripts.${name}: ${now === undefined ? 'missing' : `is ${JSON.stringify(now)}`}, but simpright apply writes ${JSON.stringify(value)}`);
+  }
 }
 
 // --- Runs and workflows ---
@@ -390,7 +417,9 @@ function checkRunsAndWorkflows(root: string, config: Config, kit: Kit, exists: E
     }
 
     const secrets = config.ci?.secrets;
-    if (secrets && (typeof job.secrets !== 'object' || job.secrets === null || !sameItems(Object.keys(job.secrets), secrets))) {
+    // No secrets: block passes none, which is right when ci.secrets is empty; `secrets: inherit` is never right.
+    const passed = job.secrets === undefined ? [] : typeof job.secrets === 'object' && job.secrets !== null ? Object.keys(job.secrets) : undefined;
+    if (secrets && (passed === undefined || !sameItems(passed, secrets))) {
       fail(where, `must pass the secrets ${listOf(secrets)} by name (ci.secrets; never secrets: inherit)`);
     }
   };
@@ -628,24 +657,12 @@ function checkCore(root: string, core: NonNullable<Config['core']>, exists: Exis
 
 // --- The template ---
 
-/** The text with CRLF line endings turned into LF, so a Windows checkout compares equal. */
-const normalize = (text: string) => text.replace(/\r\n/g, '\n');
-
 /** Compares every core file with the template's copy at `version`. */
 async function checkTemplate(version: string, files: string[], exists: Exists, read: Read, fetchFile: typeof fetch): Promise<{ problems: string[] }> {
-  /** The template's copy of `file` at the recorded version, or undefined when the tag has no such file (404). */
-  const fetchTemplateFile = async (file: string): Promise<string | undefined> => {
-    const url = `https://raw.githubusercontent.com/${TEMPLATE_REPO}/refs/tags/${version}/${file}`;
-    const response = await fetchFile(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    if (response.status === 404) return undefined;
-    if (!response.ok) throw new Error(`${url}: ${response.status} ${response.statusText}`);
-    return normalize(await response.text());
-  };
-
   /** What's wrong with `file`, or undefined when both copies match. */
   const compareFile = async (file: string): Promise<string | undefined> => {
-    const ours = exists(file) ? normalize(read(file)) : undefined;
-    const theirs = await fetchTemplateFile(file);
+    const ours = exists(file) ? withLf(read(file)) : undefined;
+    const theirs = await fetchTemplateFile(version, file, fetchFile);
     if (theirs === undefined) return 'missing in the template';
     if (ours === undefined) return 'missing here';
     return ours === theirs ? undefined : 'differs';

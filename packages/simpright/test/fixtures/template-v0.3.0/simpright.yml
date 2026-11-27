@@ -1,0 +1,163 @@
+# yaml-language-server: $schema=./node_modules/simpright/simpright.schema.json
+#
+# The project's toolchain config: what the SimpRight Kit's commands and the QA agents need to know about this project.
+# npm run doctor checks that every path below exists. Tests never read it: their config is src/envs/<ENV>.json and .env.
+# It holds facts and pointers, not conventions: those stay in the files listed under project.conventions, and the
+# exemplars show the style to copy.
+
+template: v0.3.0                            # the SimpRightTemplate version the core files (core.files) came from; npm run doctor compares them
+
+project:
+  language: typescript
+  runner: playwright
+  conventions: [CLAUDE.md, docs/framework/conventions.md]   # prose rules the agents must read: the project's own and the framework's (CLAUDE.md imports them)
+
+paths:
+  scenarios: test-scenarios                 # <layer>/<area>/<name>.yml
+  scenarioSchema: node_modules/@simpright/scenarios/schemas/scenarios.schema.json   # the formats are the kit's
+  bugs: bugs                                # <ID>.yml, one per bug in the app under test (BUG-001.yml)
+  bugSchema: node_modules/@simpright/scenarios/schemas/bug.schema.json
+  tests: tests                              # <layer>/<area>/<name>.spec.ts
+  apiTests: tests/api
+  uiTests: tests/ui
+  pages: src/ui/pages                       # page objects; components/ and dialogs/ inside
+  testData: src/data                        # TestConstants.ts, factories/<Area>Factory.ts
+
+commands:
+  typecheck: npm run typecheck
+  validateScenarios: npm run validate:scenarios
+  # Agents run headless (HEADLESS=true); a person's local UI runs show the browser by default.
+  runSpec: HEADLESS=true npx playwright test {spec}
+  runScenario: HEADLESS=true npx playwright test -g "{id}:"
+  repeatSpec: HEADLESS=true npx playwright test {spec} --repeat-each=3   # flakiness check after a spec passes
+  # Page inspector (read-only): data-test elements + accessibility tree of {path} (relative to baseUrl).
+  # Options: --role <role> | --logged-out; --then <step>, repeatable: click:<data-test> (tabs, menus, links),
+  # "check:<label>" (a filter checkbox), "select:<data-test>=<option label>" (a sort order). Steps change no data.
+  inspectUi: npm run inspect:ui -- {path}
+  # CI runs (GitHub Actions, needs gh logged in): the run's workflow, branch, commit and time, and the logs of its failed steps.
+  ciRunInfo: gh run view {run} --json workflowName,headBranch,headSha,createdAt,conclusion,jobs
+  ciFailedLog: gh run view {run} --log-failed
+
+ids:
+  # Scenario IDs are <PREFIX>-<number>, numbered across the whole layer, not per area: API-0001, UI-001.
+  # A new scenario takes the next free number of its layer (validate:scenarios prints it).
+  # A scenario file lives in <layer>/<area>/<name>.yml, with an area from the list below.
+  layers:
+    ui: { prefix: UI, digits: 3 }
+    api: { prefix: API, digits: 4 }
+  areas: [products]
+  # Bug IDs: BUG-001, one number sequence for all bugs (validate:scenarios prints the next free one).
+  # One bug per root cause: scenarios that hit the same defect name the same bug.
+  bugs: { prefix: BUG, digits: 3 }
+  fileNames:
+    # API: <method>-<endpoint path>, one file per endpoint, e.g. GET /products/search -> products/get-products-search.yml.
+    # {area} is replaced with the folder name, so the path part starts with the API name.
+    # Other layers: any kebab-case name (UI files are named after their spec).
+    api: "^(get|post|put|patch|delete|query)-{area}(-[a-z0-9]+)*$"
+
+# A scenario role must be one of these. default logs in once project.login is set up (src/config/project.ts);
+# guest is a logged-out visitor: test.use({ authMode: 'none' }).
+roles: [default, guest]
+
+# The QA agents' facts, read by the kit's simpright-qa plugin when parts.agents is on (it's off here).
+agents:
+  api:
+    exemplars:
+      client: src/api/clients/ProductsClient.ts
+      service: src/api/services/ProductsService.ts
+      dto: src/api/dto/product.ts
+      fixtures: src/api/fixtures/fixtures.ts  # new clients and services are registered here
+      spec: tests/api/products/get-products-search.spec.ts
+      helpers: src/utils/assertHelpers.ts     # assertMessage, attachJson, redact
+      checks: src/utils/apiChecks.ts          # the app's checks, plus src/utils/httpChecks.ts re-exported (parseJson, expectStatus, expectStatusAndBody, expectSomeItems, ...)
+      steps: src/api/fixtures/apiSteps.ts     # the app's step helpers, plus src/api/fixtures/sendSteps.ts re-exported (sendAndAttach, checkStatusAndMessage)
+      cleanup: src/fixtures/base.ts           # the cleanup fixture
+      constants: src/data/TestConstants.ts    # shared seeded values
+      testDataUtils: src/data/factories/testDataUtils.ts   # uniqueName for created records
+    # Known-issue line of a test whose scenario has knownIssue and bug, right before its first test.step (after any setup,
+    # so a failed setup stays a real failure); Playwright records it as a 'fail' annotation.
+    knownIssue: "test.fail(true, 'Known issue {bug}: {text}');"
+    rules:
+      - Happy paths go through a service; any step that checks a status code goes through the client.
+      - Specs import from @fixtures and never construct clients or services.
+      - Every assertion passes assertMessage({ request, expected, actual }); a bare expect without a message is forbidden.
+      - Payloads are attached with attachJson, never test.info().attach, so secrets are masked (reports can be published).
+      - Compare secret values (a test user's email) as a condition, e.g. expect(a === b, message).toBe(true), so a failure diff doesn't print them.
+      - Records a test creates are removed through the cleanup fixture (cleanup.add), not afterAll.
+      - Reuse the shared checks (agents.api.exemplars.checks), the step helpers (agents.api.exemplars.steps) and the area's src/api/fixtures/<area>Steps.ts, and parse bodies with parseJson; a spec never redefines them. Tests that differ only in their data share one template function, called from a literal test() per scenario.
+      - Seeded values more than one test relies on go in TestConstants; a value one test uses stays a variable in that test.
+      - Create/update payloads come from a factory per area (src/data/factories/<Area>Factory.ts, created with the first scenario that needs it), with uniqueName for every created record.
+
+  ui:
+    exemplars:
+      page: src/ui/pages/HomePage.ts
+      basePage: src/ui/pages/AppPage.ts      # pages extend this, the app's base page; it extends the core BasePage
+      component: src/ui/pages/components/ProductGrid.ts
+      baseComponent: src/ui/pages/components/BaseComponent.ts   # components extend this; locators start from root
+      dialog: src/ui/pages/dialogs/BaseDialog.ts   # no concrete dialog yet: subclasses extend this
+      fixtures: src/ui/fixtures/fixtures.ts   # new pages, components, dialogs and flows are registered here
+      preconditionFixture: src/ui/fixtures/preconditions/openHomePageTest.ts
+      fixturesIndex: src/fixtures/index.ts    # precondition fixtures are exported here
+      spec: tests/ui/products/product-search.spec.ts
+      constants: src/data/TestConstants.ts
+    # Known-issue line of a test whose scenario has knownIssue and bug, placed like the API one (the same annotation).
+    knownIssue: "test.fail(true, 'Known issue {bug}: {text}');"
+    rules:
+      - Specs import from @fixtures and get pages, components, flows and API services from fixtures; they never construct them, call page.goto or use selectors.
+      - Page object locators are private readonly fields named with the element kind (searchCaptionText); a test reaches one only through a noun getter (get searchCaption()), added when a test asserts on it. Dynamic locators are methods with parameters (card(name)).
+      - Locator priority is getByTestId (data-test), then getByRole, getByLabel or getByText, then CSS; never XPath. Take data-test ids and labels from commands.inspectUi, never guess them.
+      - No assertions in page objects. An action waits for the app's own signal (a marker, a toast, the next page's element, or its request through waitForApiResponse), never a fixed sleep.
+      - Every new page object, dialog and flow, and every component used outside a page, is registered as a fixture in agents.ui.exemplars.fixtures; a component a page holds is reached through that page's field (homePage.productGrid).
+      - A scenario's preconditions are set up before the first step, never in a test.step; a precondition fixture (open<Page>Test, no test.step inside) when tests share one, imported as test so the validator finds the titles; otherwise setup code with a // Precondition comment.
+      - Every assertion carries a plain-text message saying what is checked.
+      - Data a UI test needs (a user, a record) is prepared and removed through the API (setup helpers in src/ui/fixtures/, cleanup.add), never through the UI and never in a test.step; a setup failure throws an error starting with Setup:.
+      - UI suite tags are @<area> (@products); API tags are @<area>-api.
+      - The inspector is read-only; its steps click tabs, menus and links, check filters and pick list options, never type or submit.
+
+  liveApi:
+    # Applies to UI tests too: a UI test that changes data (an order, a registration, a profile change) is a write.
+    writes: ask                               # never | ask | allowed
+    # Known ways the live app misbehaves for a while; add what you learn about yours.
+    transient:
+      - The Toolshop demo site re-seeds every hour at :00 UTC. For a minute or two, calls can fail with 500, and records get new ids.
+
+# The framework's optional parts and whether this project uses them.
+parts:
+  scenarios: true                           # test-scenarios/ and bugs/, checked by validate:scenarios
+  inspector: true                           # commands.inspectUi
+
+# The framework's core: the files a project gets from the template and keeps generic. A core code file imports only
+# other core files, the seams and packages (npm run doctor checks it); the app's code goes in the project's own files.
+core:
+  files:
+    - src/config/env.ts                     # the environment config, the users, the roles (from the seam)
+    - src/config/defineProject.ts           # the shape of the project file
+    - src/utils/envUtils.ts
+    - src/utils/assertHelpers.ts            # masking, assertion messages, attachments
+    - src/utils/httpChecks.ts               # the HTTP-level API checks
+    - src/api/clients/BaseClient.ts
+    - src/api/services/serviceUtils.ts
+    - src/api/auth/TokenService.ts
+    - src/api/coverage/apiCoverage.ts
+    - src/api/fixtures/sendSteps.ts         # sendAndAttach and the generic templates
+    - src/ui/auth/authState.ts
+    - src/ui/pages/BasePage.ts
+    - src/ui/pages/components/BaseComponent.ts
+    - src/ui/pages/dialogs/BaseDialog.ts
+    - src/ui/pages/waitForApiResponse.ts
+    - src/ui/pages/fillSecret.ts            # types a secret without printing it; the page fixture blanks it after the test
+    - src/fixtures/base.ts                  # role, authMode, config, tokenService, storageState, page, user, cleanup
+    - src/data/factories/testDataUtils.ts   # uniqueName
+    - src/globalSetup.ts
+    - scripts/inspect-ui.mts                # the page inspector
+    - scripts/inspect-ui/inspect-page.spec.ts
+    - playwright.config.ts
+    - docs/framework/conventions.md         # the framework's rules (CLAUDE.md imports them)
+  seams:
+    - src/config/roles.ts                   # the roles tests act as
+    - src/config/project.ts                 # the app's test ids, logins and run hooks
+
+ci:
+  branches: { default: main }
+  node: 24                                  # every actions/setup-node step uses it
+  secrets: []                               # names of the repository secrets the tests read, never values

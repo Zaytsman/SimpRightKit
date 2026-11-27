@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../packages/simpright/init-answers.schema.json
+# An API-only project: the UI examples and keys go, the login is the bearer preset (the token's lifetime read from
+# the response), and the default role's user comes from .env. The API examples run.
+layers: [api]
+app:
+  apiBaseUrl: https://api.practicesoftwaretesting.com
+login:
+  preset: bearer
+  path: /users/login
+  body: { email: username, password: password }
+  tokenField: access_token
+  expiresInField: expires_in
+roles:
+  default: { username: DEFAULT_EMAIL, password: DEFAULT_PASSWORD }

@@ -1,0 +1,33 @@
+{
+  "name": "simpright-template",
+  "version": "0.3.0",
+  "private": true,
+  "description": "A TypeScript + Playwright framework for UI and API tests, with YAML scenarios checked by a validator",
+  "license": "MIT",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --project=ui",
+    "test:api": "playwright test --project=api",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:headed": "playwright test --project=ui --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit",
+    "validate:scenarios": "simpright-scenarios validate",
+    "check:step-titles": "simpright-scenarios check-step-titles",
+    "doctor": "simpright doctor",
+    "inspect:ui": "node scripts/inspect-ui.mts",
+    "install:browsers": "playwright install --with-deps chromium"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@simpright/scenarios": "0.3.0",
+    "@types/node": "^26.6.5",
+    "dotenv": "^18.0.8",
+    "simpright": "0.3.0",
+    "typescript": "^7.0.2"
+  }
+}

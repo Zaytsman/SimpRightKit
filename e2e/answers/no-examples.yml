@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=../../packages/simpright/init-answers.schema.json
+# Without the examples, with the QA agents: the examples move to docs/exemplars/ as the agents' style exemplars,
+# and apply writes the QA plugin's plain files. No tests to run.
+examples: remove
+config:
+  parts: { scenarios: true, inspector: true, agents: true }

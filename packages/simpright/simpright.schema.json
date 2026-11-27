@@ -124,8 +124,7 @@
         },
         "areas": {
           "type": "array",
-          "description": "Area folder names under each layer, e.g. products.",
-          "minItems": 1,
+          "description": "Area folder names under each layer, e.g. products. Empty in a new project: each area is added with its first scenario.",
           "uniqueItems": true,
           "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
         },
@@ -265,7 +264,8 @@
       "properties": {
         "scenarios": { "type": "boolean", "description": "Scenario and bug files, checked by simpright-scenarios validate (@simpright/scenarios)." },
         "inspector": { "type": "boolean", "description": "The read-only page inspector (commands.inspectUi)." },
-        "agents": { "type": "boolean", "description": "The QA agents: the kit's simpright-qa plugin, which simpright apply enables in .claude/settings.json. Needs agents." },
+        "ci": { "type": "boolean", "description": "The CI part: simpright apply writes the GitHub Actions workflows (from ci and runs) and dependabot.yml. Off or unset, apply writes none; runs need it." },
+        "agents": { "type": "boolean", "description": "The QA agents: simpright apply writes the kit's simpright-qa plugin into .claude/ as plain skills and agents. Needs agents and parts.scenarios." },
         "coverage": {
           "description": "The optional API coverage reporter, or false.",
           "oneOf": [

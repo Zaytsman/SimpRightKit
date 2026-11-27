@@ -1,11 +1,14 @@
 // The kit's Claude Code plugins (plugins/*) and their marketplace: the fields their agents and skills set, the names,
-// paths and simpright.yml keys their texts use, and the names of SimpRight's own app, which none of them may contain.
+// paths and simpright.yml keys their texts use, and the names of SimpRight's own app, which none of them may contain;
+// the shared rules every plugin carries a copy of, and the setup interview's example answers.
 // `npm run validate:plugins` runs Claude Code's own checks of the same files.
 
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
+import { parse } from 'yaml';
+import { checkAnswers } from '../packages/simpright/src/answers.ts';
 import { KIT } from './helpers.ts';
 
 const VERSION = (JSON.parse(readFileSync(path.join(KIT, 'packages/simpright/package.json'), 'utf8')) as { version: string }).version;
@@ -53,10 +56,12 @@ const PLUGINS: Plugin[] = readdirSync(path.join(KIT, 'plugins'), { withFileTypes
   .map((entry) => {
     const root = path.join(KIT, 'plugins', entry.name);
     const manifest = JSON.parse(readFileSync(path.join(root, '.claude-plugin/plugin.json'), 'utf8')) as { name: string };
+    // The setup plugin has no agents: its skills ask the user, so they run in the main conversation.
+    const agents = path.join(root, 'agents');
     return {
       name: manifest.name,
       root,
-      agents: readdirSync(path.join(root, 'agents')).filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3)),
+      agents: existsSync(agents) ? readdirSync(agents).filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3)) : [],
       skills: readdirSync(path.join(root, 'skills')).filter((dir) => existsSync(path.join(root, 'skills', dir, 'SKILL.md'))),
       files: filesUnder(root).filter((file) => !file.startsWith('.claude-plugin/')),
     };
@@ -111,8 +116,7 @@ for (const plugin of PLUGINS) {
       assert.equal(manifest.version, VERSION, 'the plugin carries the kit version (release.ts sets it)');
     });
 
-    it('has agents that set only the fields plugin agents support, keep their file names and start without CLAUDE.md', () => {
-      assert.ok(plugin.agents.length > 0, 'no agents');
+    it('has agents, if any, that set only the fields plugin agents support, keep their file names and start without CLAUDE.md', () => {
       for (const agent of plugin.agents) {
         const fields = frontmatter(read(plugin, `agents/${agent}.md`));
         for (const key of fields.keys()) assert.ok(AGENT_FIELDS.has(key), `agents/${agent}.md: ${key} isn't a field plugin agents support`);
@@ -155,7 +159,10 @@ for (const plugin of PLUGINS) {
           }
           if (/^name: /.test(line)) return;
           for (const name of names) {
-            for (const match of line.matchAll(new RegExp(`(?<![\\w:.-])${name}(?![\\w-])`, 'g'))) {
+            // A name with a hyphen is the plugin's wherever it stands. A one-word name (setup, doctor) is also a plain
+            // word, so only its command (/setup) and code (`setup`) forms count.
+            const bare = name.includes('-') ? name : `(?:/${name}|\`${name}\`)`;
+            for (const match of line.matchAll(new RegExp(`(?<![\\w:.-])${bare}(?![\\w-])`, 'g'))) {
               const before = line.slice(0, match.index);
               assert.ok(before.endsWith('skills/'), `${where}: names ${name} without the ${plugin.name}: prefix`);
             }
@@ -203,6 +210,27 @@ for (const plugin of PLUGINS) {
     });
   });
 }
+
+describe("the plugins' shared rules", () => {
+  it('give every plugin the same copy of how-to-ask.md', () => {
+    const copies = PLUGINS.filter((plugin) => plugin.files.includes('shared/how-to-ask.md'));
+    assert.ok(copies.length > 1, 'each plugin with skills that ask carries its own copy (a plugin reads only its own files)');
+    for (const plugin of copies.slice(1)) {
+      assert.equal(read(plugin, 'shared/how-to-ask.md'), read(copies[0]!, 'shared/how-to-ask.md'), `${plugin.name}'s copy differs from ${copies[0]!.name}'s`);
+    }
+  });
+});
+
+describe("the setup interview's example answers", () => {
+  it("pass simpright init's checks", () => {
+    const setup = PLUGINS.find((plugin) => plugin.name === 'simpright');
+    assert.ok(setup, 'the simpright plugin');
+    const text = read(setup, 'skills/setup/references/interview.md');
+    const example = /^## The answers file\n[\s\S]*?^```yaml\n([\s\S]*?)^```$/m.exec(text)?.[1];
+    assert.ok(example, 'interview.md has a YAML example under "The answers file"');
+    assert.doesNotThrow(() => checkAnswers(parse(example), 'interview.md'));
+  });
+});
 
 describe('the marketplace', () => {
   it('lists every plugin by its manifest name and folder, with no version of its own', () => {

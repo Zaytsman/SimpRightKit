@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=../../packages/simpright/init-answers.schema.json
+# The folders outside the core moved or added: the scenarios and bugs under qa/ (their $schema headers and the
+# specs' // Scenarios: comments follow) and two docs folders. The API examples run.
+folders:
+  scenarios: qa/scenarios
+  bugs: qa/bugs
+  contracts: docs/api/contracts
+  analysis: docs/analysis

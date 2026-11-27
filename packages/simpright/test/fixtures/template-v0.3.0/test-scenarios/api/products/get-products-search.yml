@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=../../../node_modules/@simpright/scenarios/schemas/scenarios.schema.json
+suite: Products API
+tags: ["@products-api"]
+scenarios:
+  - id: API-0001
+    name: Search by name returns only matching products
+    tags: ["@smoke"]
+    status: automated
+    automatedIn: tests/api/products/get-products-search.spec.ts
+    steps:
+      - Send GET /products/search with q=pliers.
+      - Verify the response status is 200 and the body is paginated (data, total, current_page).
+      - Verify total is greater than 0 and every item's name contains "pliers" (case-insensitive).
+      - Verify each item has an id, a name and a price greater than 0.
+  - id: API-0002
+    name: Search page 2 returns the second page
+    status: automated
+    automatedIn: tests/api/products/get-products-search.spec.ts
+    steps:
+      - Send GET /products/search with q=pliers and page=2.
+      - Verify the response status is 200.
+      - Verify current_page is 2.
+  - id: API-0003
+    name: Search for a term no product has returns an empty page
+    status: automated
+    automatedIn: tests/api/products/get-products-search.spec.ts
+    steps:
+      - Send GET /products/search with q set to a unique name that no product has.
+      - Verify the response status is 200.
+      - Verify data is an empty array and from is null.
+  - id: API-0004
+    name: Search without a term returns an empty page
+    status: automated
+    automatedIn: tests/api/products/get-products-search.spec.ts
+    steps:
+      - Send GET /products/search without query parameters.
+      - Verify the response status is 200.
+      - Verify data is an empty array and from is null.
+  - id: API-0005
+    name: Search with an empty term returns an empty page
+    status: automated
+    automatedIn: tests/api/products/get-products-search.spec.ts
+    steps:
+      - Send GET /products/search with an empty q.
+      - Verify the response status is 200.
+      - Verify data is an empty array and from is null.

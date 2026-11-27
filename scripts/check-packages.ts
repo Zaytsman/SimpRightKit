@@ -9,12 +9,15 @@ import { execFileSync } from 'node:child_process';
  * simpright also has dist/release.json, which the release workflow writes after this check.
  */
 const EXTRA: Record<string, string[]> = {
-  simpright: ['simpright.schema.json', 'dist/kit-data.json'],
+  simpright: ['simpright.schema.json', 'init-answers.schema.json', 'dist/kit-data.json'],
   '@simpright/scenarios': ['schemas/bug.schema.json', 'schemas/scenarios.schema.json'],
   '@simpright/portal': ['pages/bugs.html', 'pages/dashboard.html', 'pages/test-cases.html', 'sample/portal.json', 'sample/site.json'],
 };
-/** Folders a package ships whole, besides the files above: the portal's sample site (scripts/sample-site.ts writes it). */
-const FOLDERS: Record<string, string[]> = { '@simpright/portal': ['sample/'] };
+/**
+ * Folders a package ships whole, besides the files above: the portal's sample site (scripts/sample-site.ts writes it)
+ * and the kit's plugins that simpright apply writes into projects (scripts/kit-data.ts copies them).
+ */
+const FOLDERS: Record<string, string[]> = { '@simpright/portal': ['sample/'], simpright: ['dist/plugins/'] };
 const COMMON = ['package.json', 'README.md', 'LICENSE'];
 
 interface Packed {
