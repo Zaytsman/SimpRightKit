@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=../../packages/simpright/init-answers.schema.json
+# A UI-only project: the API examples and keys go, and the test-id attribute is set. The UI examples run.
+layers: [ui]
+app:
+  testIdAttribute: data-test

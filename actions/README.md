@@ -38,7 +38,7 @@ npx simpright apply --dry-run   # show the changes
 npx simpright apply             # write them
 ```
 
-From `simpright.yml` (the [`simpright`](../packages/simpright) package documents the keys):
+From `simpright.yml` (the [`simpright`](../packages/simpright) package documents the keys), when it turns the CI part on (`parts.ci: true`, which needs `ci`: the branches, the Node version and the secrets). Without the CI part, `apply` writes none of these and removes the ones it wrote, so a project can keep CI of its own and still use the kit's other parts.
 
 | File | When | What |
 |---|---|---|

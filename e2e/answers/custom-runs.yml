@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=../../packages/simpright/init-answers.schema.json
+# The CI part with a portal and runs of its own (ids, names, schedules, branches develop and main): the template's
+# hand-written CI goes, and apply writes the workflows, which actionlint checks. No tests to run.
+config:
+  parts: { scenarios: true, inspector: true, ci: true, portal: { testCases: true, bugs: true } }
+  ci: { node: 24, secrets: [], branches: { default: main, work: develop } }
+  runs:
+    - { id: nightly-api, label: Nightly API, workflow: nightly-api.yml, project: api, schedule: '15 2 * * 1-5', trend: api }
+    - { id: nightly-ui, label: Nightly UI, workflow: nightly-ui.yml, project: ui, schedule: '15 6 * * 1-5', trend: ui }
+    - { id: custom-ui, label: Custom UI, project: ui, areaPicker: true, keep: 5 }
+  portal: { title: Example Shop, titleAccent: Shop, healthThreshold: { ui: 1, api: 1 } }

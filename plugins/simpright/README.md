@@ -26,7 +26,7 @@ In a kit project there's nothing to install: `npx simpright apply` writes the pl
 
 ## Develop
 
-`claude --plugin-dir <path of your SimpRightKit clone>/plugins/simpright` loads the plugin next to a project's plain files, under its plugin names (`/simpright:setup`). To try a change under the project's names, build the kit and run its `apply` on a scratch copy of the template.
+`claude --plugin-dir <path of your SimpRightKit clone>/plugins/simpright` loads the plugin next to a project's plain files, under its plugin names (`/simpright:setup`). To try a change under the project's names, build the kit and run its `apply` on a scratch copy of the template; the kit's [CONTRIBUTING.md](../../CONTRIBUTING.md) has the routine for a whole `/simpright-setup` run on such a copy.
 
 In the kit:
 - `npm run validate:plugins` runs `claude plugin validate --strict` on the marketplace and each plugin;

@@ -1,11 +1,15 @@
 name: E2E
 
-# Runs the kit's actions for real, as a project's generated workflows do, on the sample project (examples/sample-project):
-# the install, its smoke tests and the step-title check, publishing the run and the portal's pages to this repository's
-# gh-pages branch, and squashing that branch's history; then checks what landed there. The actions and the packages are
-# this commit's own (./actions/*, and the packages the sample links from packages/). Nothing serves the branch: this
-# repository's Pages deploy the demo portal from Actions (demo.yml). publish-wiki would overwrite this repository's
-# wiki, so only its page copy (sync-pages.sh) is checked, on two temporary folders.
+# Two jobs, both on this commit's own packages and actions.
+# - e2e runs the kit's actions for real, as a project's generated workflows do, on the sample project
+#   (examples/sample-project): the install, its smoke tests and the step-title check, publishing the run and the
+#   portal's pages to this repository's gh-pages branch, and squashing that branch's history; then it checks what
+#   landed there. The actions are ./actions/*, and the sample links the packages from packages/. Nothing serves the
+#   branch: this repository's Pages deploy the demo portal from Actions (demo.yml). publish-wiki would overwrite this
+#   repository's wiki, so only its page copy (sync-pages.sh) is checked, on two temporary folders.
+# - init sets up a fresh copy of SimpRightTemplate (the tag in e2e/template.json) per case, as /simpright-setup does:
+#   init from the case's answers (e2e/answers/), apply, and the checks, with the packages packed from this commit
+#   (e2e/init-case.sh has the steps, and runs a case locally too).
 
 on:
   pull_request:
@@ -136,3 +140,50 @@ jobs:
           [ -f "$first/Home.md" ] && [ ! -e "$first/.gitkeep" ] || { echo "::error::sync-pages emptied the wiki from a folder without pages"; failed=1; }
           test "$failed" = 0
           echo "sync-pages copies a changed page of the same size and time, adds and removes pages, keeps .git, skips .gitkeep, and leaves the wiki alone without pages."
+
+  # One job per case of simpright init's matrix. No token: nothing here pushes. The examples run on the live app.
+  init:
+    name: init (${{ matrix.case }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { case: defaults, tests: all }
+          - { case: api-only, tests: api }
+          - { case: ui-only, tests: ui }
+          - { case: no-examples, tests: none }
+          - { case: custom-folders, tests: api }
+          - { case: custom-runs, tests: none }
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up the kit
+        uses: ./actions/setup
+        with:
+          node-version: 24
+
+      # A pinned release, checked against the SHA-256 GitHub records for the file before it runs.
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$archive" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict -
+          mkdir -p "$RUNNER_TEMP/actionlint"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP/actionlint" actionlint
+          echo "ACTIONLINT=$RUNNER_TEMP/actionlint/actionlint" >> "$GITHUB_ENV"
+
+      # The generated workflows pin the kit's actions to the pull request's head commit (on a push, the pushed one).
+      - name: Set up and check the copy
+        env:
+          CASE: ${{ matrix.case }}
+          TESTS: ${{ matrix.tests }}
+          KIT_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash e2e/init-case.sh "$CASE" "$TESTS"
