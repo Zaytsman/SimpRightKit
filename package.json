@@ -23,8 +23,8 @@
     "node": ">=22.18"
   },
   "devDependencies": {
-    "@anthropic-ai/claude-code": "2.1.322",
-    "@playwright/test": "^1.65.0",
+    "@anthropic-ai/claude-code": "2.1.327",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
     "chart.js": "4.5.1",
     "typescript": "^7.0.2"
