@@ -1,0 +1,1 @@
+{"run":"run-26","stats":{"startTime":"2026-11-27T13:17:04.615Z","duration":774.3389999999999,"expected":2,"skipped":0,"unexpected":0,"flaky":0},"knownIssues":[],"tests":{"API-0001":{"status":"passed","expectedStatus":"passed"},"UI-001":{"status":"passed","expectedStatus":"passed"}}}
