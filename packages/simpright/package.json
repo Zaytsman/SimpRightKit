@@ -1,6 +1,6 @@
 {
   "name": "simpright",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "The SimpRight Kit's command-line tool: `simpright init` sets up a copy of SimpRightTemplate, `simpright apply` writes what the parts in simpright.yml ask for, and `simpright doctor` checks the setup. Also simpright.yml's schema and reader for the kit's other packages.",
   "keywords": [
     "simpright",

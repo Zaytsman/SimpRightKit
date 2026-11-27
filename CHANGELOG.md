@@ -2,7 +2,7 @@
 
 The kit's packages share one version; each release lists what changed in each of them.
 
-## 0.4.0 (unreleased)
+## 0.4.0 (2026-11-27)
 
 The setup: `simpright init` and the setup plugin (`/simpright-setup`, `/simpright-doctor`), `apply` and `doctor` for every part, and the kit's plugins as plain project files. A repository made from SimpRightTemplate gets `/simpright-setup` in its first Claude Code session, with nothing to install and no folder to trust. After upgrading a project:
 

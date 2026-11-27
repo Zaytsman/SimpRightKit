@@ -1,7 +1,7 @@
 {
   "name": "simpright",
   "displayName": "SimpRight Setup",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Sets up and checks a SimpRight Kit project (Playwright + TypeScript): the setup interview, simpright init and apply at your OK, a first test run, the project's README and CLAUDE.md, the GitHub settings, and a doctor that explains what's wrong.",
   "author": {
     "name": "Andrii Zaitsev"
